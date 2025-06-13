@@ -85,6 +85,16 @@ DEFAULT_OVERLAP_PERCENT = 10  # See semantic search article for 10% overlap perf
 DEFAULT_SECTION_LENGTH = 1000  # Roughly 400-500 tokens for English
 
 
+class DoclingDummySplitter(TextSplitter):
+    """
+    Splits pages using Docling's HybridChunker with a tiktoken tokenizer.
+    """
+
+    def split_pages(self, pages: list[Page]) -> Generator[SplitPage, None, None]:
+        for page in pages:
+            yield SplitPage(page_num=page.page_num, text=page.text)
+
+
 def _safe_concat(a: str, b: str) -> str:
     """Concatenate two non-empty segments, inserting a space only when both sides
     end/start with alphanumerics and no natural boundary exists.
