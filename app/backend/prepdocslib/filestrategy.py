@@ -1,4 +1,5 @@
 import logging
+import json  # Added import
 from typing import Optional
 
 from azure.core.credentials import AzureKeyCredential
@@ -99,10 +100,29 @@ class FileStrategy(Strategy):
     async def run(self):
         self.setup_search_manager()
         if self.document_action == DocumentAction.Add:
+            # Load metadata from JSON file
+            metadata_file_path = "c:\\\\projects\\\\DNRAG\\\\metadata\\\\all_metadata_combined.json"  # Adjusted path
+            try:
+                with open(metadata_file_path, 'r', encoding='utf-8') as f:
+                    all_metadata = json.load(f)
+                # Create a lookup map for faster access
+                metadata_lookup = {item.get("downloaded_filename"): item.get("content_type") for item in all_metadata}
+            except FileNotFoundError:
+                logger.error(f"Metadata file not found: {metadata_file_path}")
+                metadata_lookup = {}
+            except json.JSONDecodeError:
+                logger.error(f"Error decoding JSON from metadata file: {metadata_file_path}")
+                metadata_lookup = {}
+
             files = self.list_file_strategy.list()
             async for file in files:
                 try:
-                    sections = await parse_file(file, self.file_processors, self.category, self.image_embeddings)
+                    # Determine category for the current file
+                    file_category = metadata_lookup.get(file.filename())
+                    if not file_category:
+                        file_category = self.category  # Fallback to the global category
+
+                    sections = await parse_file(file, self.file_processors, file_category, self.image_embeddings)
                     if sections:
                         blob_sas_uris = await self.blob_manager.upload_blob(file)
                         blob_image_embeddings: Optional[list[list[float]]] = None

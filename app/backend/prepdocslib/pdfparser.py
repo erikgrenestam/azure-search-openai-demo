@@ -19,6 +19,19 @@ from azure.core.exceptions import HttpResponseError
 from PIL import Image
 from pypdf import PdfReader
 
+from docling.datamodel.base_models import DocumentStream
+from docling.document_converter import DocumentConverter, PdfFormatOption
+from docling.chunking import HybridChunker
+import tiktoken
+from docling_core.transforms.chunker.tokenizer.openai import OpenAITokenizer
+from docling.datamodel.base_models import InputFormat
+from docling.datamodel.pipeline_options import (
+    PdfPipelineOptions,
+    AcceleratorDevice,
+    AcceleratorOptions,
+    smolvlm_picture_description
+)
+
 from .mediadescriber import ContentUnderstandingDescriber
 from .page import Page
 from .parser import Parser
@@ -42,6 +55,82 @@ class LocalPdfParser(Parser):
             page_text = p.extract_text()
             yield Page(page_num=page_num, offset=offset, text=page_text)
             offset += len(page_text)
+
+
+class DoclingPdfParser(Parser):
+    """
+    Concrete parser backed by the Docling library that can parse PDFs into pages.
+    To learn more, please visit https://github.com/docling-project/docling
+    """
+    def __init__(self, max_tokens_per_section: int = 500, overlap_tokens: int = 50):
+        self.max_tokens_per_section = max_tokens_per_section
+        self.overlap_tokens = overlap_tokens
+        # tokenizer = TiktokenTokenizer(encoding_name=ENCODING_MODEL)
+        tokenizer = OpenAITokenizer(
+             tokenizer=tiktoken.encoding_for_model("gpt-4o"),
+             max_tokens=128 * 1024,  # context window length required for OpenAI tokenizers
+        )
+        self.chunker = HybridChunker(
+            tokenizer=tokenizer,
+            max_chunk_size=self.max_tokens_per_section,
+            overlap_size=self.overlap_tokens,
+        )
+
+        pipeline_options = PdfPipelineOptions()
+        pipeline_options.do_ocr = True
+        pipeline_options.do_table_structure = True
+        #pipeline_options.do_picture_description = True
+        #pipeline_options.picture_description_options = (
+        #    smolvlm_picture_description  # <-- the model choice
+        #)
+        #pipeline_options.picture_description_options.prompt = (
+        #    "Describe the image in three sentences. Be consise and accurate."
+        #)       
+        #pipeline_options.images_scale = 2.0
+        #pipeline_options.generate_picture_images = True
+        pipeline_options.table_structure_options.do_cell_matching = True
+        pipeline_options.accelerator_options = AcceleratorOptions(
+            num_threads=8, device=AcceleratorDevice.AUTO
+        )
+
+        self.doc_converter = DocumentConverter(
+            format_options={
+                InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
+            }
+        )
+
+    async def parse(self, content: IO) -> AsyncGenerator[Page, None]:
+        file_name = getattr(content, 'name', 'unknown_file')
+        logger.info(f"Extracting text from '{file_name}' using Docling PDF parser")
+
+        try:
+            buf = io.BytesIO(content.read())
+            # Assuming docling.Document can take bytes directly.
+            # If it requires a file-like object, io.BytesIO(content_bytes) might be needed.
+            source = DocumentStream(name=file_name, stream=buf)
+            res = self.doc_converter.convert(source)
+            doc = res.document
+
+            chunk_iter = self.chunker.chunk(dl_doc=doc)
+            
+            offset = 0
+            for i, chunk in enumerate(chunk_iter):
+                print(f"=== {i} ===")
+                print(f"chunk.text:\n{f'{chunk.text[:300]}…'!r}")
+                enriched_text = self.chunker.contextualize(chunk=chunk)
+                
+                print("len meta.doc_items: ", len(chunk.meta.doc_items))
+                print("len meta.doc_items[0].prov: ", len(chunk.meta.doc_items[0].prov))
+                page_num = chunk.meta.doc_items[0].prov[0].page_no - 1  # 0-indexed page number
+                yield Page(page_num=page_num, offset=offset, text=enriched_text)
+                offset += chunk.meta.doc_items[0].prov[0].charspan[1]
+                print("Offset: ", offset)
+
+        except Exception as e:
+            logger.error(f"Error parsing PDF with Docling for file '{file_name}': {e}")
+            # Ensure it's an async generator even if an exception occurs before yielding anything
+            if False: # This construct ensures the method is treated as a generator
+                yield
 
 
 class DocumentAnalysisParser(Parser):
