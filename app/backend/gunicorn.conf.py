@@ -14,5 +14,6 @@ if os.getenv("WEBSITE_SKU") == "LinuxFree":
     # Free tier reports 2 CPUs but can't handle multiple workers
     workers = 1
 else:
-    workers = (num_cpus * 2) + 1
+    # workers = (num_cpus * 2) + 1
+    workers = 2
 worker_class = "custom_uvicorn_worker.CustomUvicornWorker"

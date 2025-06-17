@@ -279,6 +279,7 @@ export function Component(): JSX.Element {
                 <div className={styles.commandsContainer}>
                     {showUserUpload && <UploadFile className={styles.commandButton} disabled={!loggedIn} />}
                     <SettingsButton className={styles.commandButton} onClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)} />
+                    {showLanguagePicker && <LanguagePicker onLanguageChange={newLang => i18n.changeLanguage(newLang)} />}
                 </div>
                 <h1 className={styles.askTitle}>{t("askTitle")}</h1>
                 <div className={styles.askQuestionInput}>
