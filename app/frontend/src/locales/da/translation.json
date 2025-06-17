@@ -1,6 +1,6 @@
 {
-    "pageTitle": "Azure OpenAI + AI Search",
-    "headerTitle": "Azure OpenAI + AI Search",
+    "pageTitle": "DN dokumentchat",
+    "headerTitle": "DN dokumentchat",
     "chat": "Chat",
     "qa": "Stil et spørgsmål",
     "login": "Log ind",
@@ -39,7 +39,7 @@
         "1": "Hvad er inkluderet i min Northwind Health Plus plan, som ikke er i standardplanen?",
         "2": "Hvordan foregår en medarbejderevaluering?",
         "3": "Hvad laver en produktchef?",
-        "placeholder": "Skriv et nyt spørgsmål (f.eks. dækker min plan årlige øjenundersøgelser?)"
+        "placeholder": "Skriv et nyt spørgsmål"
     },
     "askTitle": "Spørg til dine data",
     "gpt4vExamples": {

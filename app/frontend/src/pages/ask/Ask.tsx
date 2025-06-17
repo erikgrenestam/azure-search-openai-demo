@@ -287,6 +287,7 @@ export function Component(): JSX.Element {
                 <div className={styles.commandsContainer}>
                     {showUserUpload && <UploadFile className={styles.commandButton} disabled={!loggedIn} />}
                     <SettingsButton className={styles.commandButton} onClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)} />
+                    {showLanguagePicker && <LanguagePicker onLanguageChange={newLang => i18n.changeLanguage(newLang)} />}
                 </div>
                 <h1 className={styles.askTitle}>{t("askTitle")}</h1>
                 <div className={styles.askQuestionInput}>
@@ -303,7 +304,6 @@ export function Component(): JSX.Element {
                 {isLoading && <Spinner label={t("generatingAnswer")} />}
                 {!lastQuestionRef.current && (
                     <div className={styles.askTopSection}>
-                        {showLanguagePicker && <LanguagePicker onLanguageChange={newLang => i18n.changeLanguage(newLang)} />}
                         <ExampleList onExampleClicked={onExampleClicked} useGPT4V={useGPT4V} />
                     </div>
                 )}

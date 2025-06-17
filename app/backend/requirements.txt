@@ -96,7 +96,7 @@ deprecated==1.2.14
     #   opentelemetry-semantic-conventions
 distro==1.9.0
     # via openai
-docling[vlm]==2.34.0
+docling==2.34.0
 fixedint==0.1.6
     # via azure-monitor-opentelemetry-exporter
 flask==3.0.3
