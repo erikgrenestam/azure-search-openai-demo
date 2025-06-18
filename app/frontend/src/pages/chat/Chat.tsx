@@ -39,11 +39,9 @@ const Chat = () => {
     const [retrievalMode, setRetrievalMode] = useState<RetrievalMode>(RetrievalMode.Hybrid);
     const [useSemanticRanker, setUseSemanticRanker] = useState<boolean>(true);
     const [useQueryRewriting, setUseQueryRewriting] = useState<boolean>(false);
-    const [reasoningEffort, setReasoningEffort] = useState<string>("");
-    const [streamingEnabled, setStreamingEnabled] = useState<boolean>(true);
-    const [shouldStream, setShouldStream] = useState<boolean>(true);
+    const [reasoningEffort, setReasoningEffort] = useState<string>("low");
     const [useSemanticCaptions, setUseSemanticCaptions] = useState<boolean>(false);
-    const [includeCategory, setIncludeCategory] = useState<string>("");
+    const [includeCategory, setIncludeCategory] = useState<string[]>([]);
     const [excludeCategory, setExcludeCategory] = useState<string>("");
     const [useSuggestFollowupQuestions, setUseSuggestFollowupQuestions] = useState<boolean>(false);
     const [searchTextEmbeddings, setSearchTextEmbeddings] = useState<boolean>(true);
@@ -202,13 +200,16 @@ const Chat = () => {
                 { content: a[1].message.content, role: "assistant" }
             ]);
 
+            const includeCategoryValue = includeCategory.length === 0 ? undefined : includeCategory.join(",");
             const request: ChatAppRequest = {
                 messages: [...messages, { content: question, role: "user" }],
                 context: {
                     overrides: {
                         prompt_template: promptTemplate.length === 0 ? undefined : promptTemplate,
-                        include_category: includeCategory.length === 0 ? undefined : includeCategory,
+                        prompt_template_prefix: undefined,
+                        prompt_template_suffix: undefined,
                         exclude_category: excludeCategory.length === 0 ? undefined : excludeCategory,
+                        include_category: includeCategoryValue,
                         top: retrieveCount,
                         results_merge_strategy: resultsMergeStrategy,
                         temperature: temperature,

@@ -187,7 +187,7 @@ class Approach(ABC):
         exclude_category = overrides.get("exclude_category")
         filters = []
         if include_category:
-            filters.append("category eq '{}'".format(include_category.replace("'", "''")))
+            filters.append("search.in(category, '{}', ',')".format(include_category.replace("'", "''")))
         if exclude_category:
             filters.append("category ne '{}'".format(exclude_category.replace("'", "''")))
         return None if not filters else " and ".join(filters)
