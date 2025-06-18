@@ -32,14 +32,14 @@
         "errorDeleting": "Error deleting.",
         "fileDeleted": "File deleted"
     },
-    "developerSettings": "Developer settings",
+    "developerSettings": "Settings",
 
-    "chatEmptyStateTitle": "Chat with your data",
+    "chatEmptyStateTitle": "Ask about our publications",
     "chatEmptyStateSubtitle": "Ask anything or try an example",
     "defaultExamples": {
-        "1": "What is included in my Northwind Health Plus plan that is not in standard?",
-        "2": "What happens in a performance review?",
-        "3": "What does a Product Manager do?",
+        "1": "How popular is Apple Pay in Denmark?",
+        "2": "What was our latest GDP forecast?",
+        "3": "What have we written about the CCyB?",
         "placeholder": "Type a new question"
     },
     "askTitle": "Ask your data",
