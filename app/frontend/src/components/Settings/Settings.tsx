@@ -24,7 +24,7 @@ export interface SettingsProps {
     useQueryRewriting: boolean;
     reasoningEffort: string;
     excludeCategory: string;
-    includeCategory: string;
+    includeCategory: string[];
     retrievalMode: RetrievalMode;
     useGPT4V: boolean;
     gpt4vInput: GPT4VInput;
@@ -265,8 +265,21 @@ export const Settings = ({
                 id={includeCategoryFieldId}
                 className={styles.settingsSeparator}
                 label={t("labels.includeCategory")}
-                selectedKey={includeCategory}
-                onChange={(_ev?: React.FormEvent<HTMLElement | HTMLInputElement>, option?: IDropdownOption) => onChange("includeCategory", option?.key || "")}
+                selectedKeys={includeCategory.length > 0 ? includeCategory : [""]}
+                multiSelect
+                onChange={(_ev, option) => {
+                    if (option) {
+                        if (option.key === "" && option.selected) {
+                            onChange("includeCategory", []);
+                            return;
+                        }
+                        const newSelection = option.selected
+                            ? [...includeCategory, option.key as string]
+                            : includeCategory.filter(k => k !== option.key);
+
+                        onChange("includeCategory", newSelection.filter(k => k !== ""));
+                    }
+                }}
                 aria-labelledby={includeCategoryId}
                 options={[
                     { key: "", text: t("labels.includeCategoryOptions.all") },
