@@ -189,10 +189,8 @@ class Approach(ABC):
         if exclude_category:
             filters.append("category ne '{}'".format(exclude_category.replace("'", "''")))
         if topic:
-            # allow case-insensitive substring matching on topic values
-            topic_value = topic.replace("'", "''").lower()
             filters.append(
-                "topic/any(t: substringof('{}', tolower(t)) eq true)".format(topic_value)
+                "topic/any(t: search.in(t, '{}', ','))".format(topic.replace("'", "''"))
             )
         if publication_date_min:
             filters.append(f"publication_date ge {publication_date_min}")
