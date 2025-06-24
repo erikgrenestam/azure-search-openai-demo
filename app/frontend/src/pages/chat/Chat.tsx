@@ -54,6 +54,9 @@ const Chat = () => {
     const [reasoningEffort, setReasoningEffort] = useState<string>("low");
     const [useSemanticCaptions, setUseSemanticCaptions] = useState<boolean>(false);
     const [includeCategory, setIncludeCategory] = useState<string[]>([]);
+    const [topic, setTopic] = useState<string>("");
+    const [publicationDateMin, setPublicationDateMin] = useState<string>("");
+    const [publicationDateMax, setPublicationDateMax] = useState<string>("");
     const [excludeCategory, setExcludeCategory] = useState<string>("");
     const [useSuggestFollowupQuestions, setUseSuggestFollowupQuestions] = useState<boolean>(false);
     const [vectorFields, setVectorFields] = useState<VectorFields>(VectorFields.TextAndImageEmbeddings);
@@ -221,6 +224,9 @@ const Chat = () => {
                         prompt_template_suffix: undefined,
                         exclude_category: excludeCategory.length === 0 ? undefined : excludeCategory,
                         include_category: includeCategoryValue,
+                        topic: topic.length === 0 ? undefined : topic,
+                        publication_date_min: publicationDateMin.length === 0 ? undefined : publicationDateMin,
+                        publication_date_max: publicationDateMax.length === 0 ? undefined : publicationDateMax,
                         top: retrieveCount,
                         max_subqueries: maxSubqueryCount,
                         results_merge_strategy: resultsMergeStrategy,
@@ -341,6 +347,15 @@ const Chat = () => {
                 break;
             case "includeCategory":
                 setIncludeCategory(value);
+                break;
+            case "topic":
+                setTopic(value);
+                break;
+            case "publicationDateMin":
+                setPublicationDateMin(value);
+                break;
+            case "publicationDateMax":
+                setPublicationDateMax(value);
                 break;
             case "useOidSecurityFilter":
                 setUseOidSecurityFilter(value);
@@ -556,6 +571,9 @@ const Chat = () => {
                         reasoningEffort={reasoningEffort}
                         excludeCategory={excludeCategory}
                         includeCategory={includeCategory}
+                        topic={topic}
+                        publicationDateMin={publicationDateMin}
+                        publicationDateMax={publicationDateMax}
                         retrievalMode={retrievalMode}
                         useGPT4V={useGPT4V}
                         gpt4vInput={gpt4vInput}
@@ -565,6 +583,7 @@ const Chat = () => {
                         showReasoningEffortOption={showReasoningEffortOption}
                         showGPT4VOptions={showGPT4VOptions}
                         showVectorOption={showVectorOption}
+                        useSuggestFollowupQuestions={useSuggestFollowupQuestions}
                         useOidSecurityFilter={useOidSecurityFilter}
                         useGroupsSecurityFilter={useGroupsSecurityFilter}
                         useLogin={!!useLogin}
@@ -572,7 +591,6 @@ const Chat = () => {
                         requireAccessControl={requireAccessControl}
                         shouldStream={shouldStream}
                         streamingEnabled={streamingEnabled}
-                        useSuggestFollowupQuestions={useSuggestFollowupQuestions}
                         showSuggestFollowupQuestions={true}
                         showAgenticRetrievalOption={showAgenticRetrievalOption}
                         useAgenticRetrieval={useAgenticRetrieval}

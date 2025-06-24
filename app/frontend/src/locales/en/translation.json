@@ -94,6 +94,10 @@
             "all": "All"
         },
         "excludeCategory": "Exclude category",
+        "publicationDateRange": "Publication date",
+        "publicationDateMin": "From date",
+        "publicationDateMax": "To date",
+        "topic": "Topic",
         "useSemanticRanker": "Use semantic ranker for retrieval",
         "useSemanticCaptions": "Use semantic captions",
         "useQueryRewriting": "Use query rewriting for retrieval",
@@ -155,6 +159,7 @@
             "Specifies a category to include in the search results. There are no categories used in the default data set.",
          "excludeCategory":
             "Specifies a category to exclude from the search results. There are no categories used in the default data set.",
+         "publicationDateRange": "Filters search results to be within a publication date range.",
          "useSemanticReranker":
             "Enables the Azure AI Search semantic ranker, a model that re-ranks search results based on semantic similarity to the user's query.",
         "useQueryRewriting":
@@ -174,6 +179,7 @@
         "streamChat": "Continuously streams the response to the chat UI as it is generated.",
         "useOidSecurityFilter": "Filter search results based on the authenticated user's OID.",
         "useGroupsSecurityFilter": "Filter search results based on the authenticated user's groups.",
-        "useAgenticRetrieval": "Use agentic retrieval from Azure AI Search for multi-query planning. Always uses semantic ranker."
+        "useAgenticRetrieval": "Use agentic retrieval from Azure AI Search for multi-query planning. Always uses semantic ranker.",
+        "topic": "Filters search results by topic. For example: 'Udsigter for dansk økonomi'"
     }
 }

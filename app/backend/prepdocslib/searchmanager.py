@@ -45,10 +45,19 @@ class Section:
     A section of a page that is stored in a search service. These sections are used as context by Azure OpenAI service
     """
 
-    def __init__(self, split_page: SplitPage, content: File, category: Optional[str] = None):
+    def __init__(
+        self,
+        split_page: SplitPage,
+        content: File,
+        category: Optional[str] = None,
+        publication_date: Optional[str] = None,
+        topic: Optional[list[str]] = None,
+    ):
         self.split_page = split_page
         self.content = content
         self.category = category
+        self.publication_date = publication_date
+        self.topic = topic
 
 
 class SearchManager:
@@ -189,6 +198,13 @@ class SearchManager:
                         analyzer_name=self.search_analyzer_name,
                     ),
                     SimpleField(name="category", type="Edm.String", filterable=True, facetable=True),
+                    SimpleField(name="publication_date", type=SearchFieldDataType.DateTimeOffset, filterable=True, facetable=True, sortable=True),
+                    SearchField(
+                        name="topic",
+                        type=SearchFieldDataType.Collection(SearchFieldDataType.String),
+                        filterable=True,
+                        facetable=True,
+                    ),
                     SimpleField(
                         name="sourcepage",
                         type="Edm.String",
@@ -423,6 +439,8 @@ class SearchManager:
                         "id": f"{section.content.filename_to_id()}-page-{section_index + batch_index * MAX_BATCH_SIZE}",
                         "content": section.split_page.text,
                         "category": section.category,
+                        "publication_date": section.publication_date,
+                        "topic": section.topic,
                         "sourcepage": (
                             BlobManager.blob_image_name_from_file_page(
                                 filename=section.content.filename(),
