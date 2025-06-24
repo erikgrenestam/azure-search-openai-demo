@@ -41,6 +41,8 @@ class Document:
     id: Optional[str] = None
     content: Optional[str] = None
     category: Optional[str] = None
+    publication_date: Optional[str] = None
+    topic: Optional[list[str]] = None
     sourcepage: Optional[str] = None
     sourcefile: Optional[str] = None
     oids: Optional[list[str]] = None
@@ -56,6 +58,8 @@ class Document:
             "id": self.id,
             "content": self.content,
             "category": self.category,
+            "publication_date": self.publication_date,
+            "topic": self.topic,
             "sourcepage": self.sourcepage,
             "sourcefile": self.sourcefile,
             "oids": self.oids,
@@ -185,12 +189,28 @@ class Approach(ABC):
     def build_filter(self, overrides: dict[str, Any]) -> Optional[str]:
         include_category = overrides.get("include_category")
         exclude_category = overrides.get("exclude_category")
+        topic = overrides.get("topic")
+        publication_date_min = overrides.get("publication_date_min")
+        publication_date_max = overrides.get("publication_date_max")
+        security_filter = self.auth_helper.build_security_filters(overrides, auth_claims)
         filters = []
         if include_category:
             filters.append("search.in(category, '{}', ',')".format(include_category.replace("'", "''")))
         if exclude_category:
             filters.append("category ne '{}'".format(exclude_category.replace("'", "''")))
-        return None if not filters else " and ".join(filters)
+        if topic:
+            # allow case-insensitive substring matching on topic values
+            topic_value = topic.replace("'", "''").lower()
+            filters.append(
+                "topic/any(t: substringof('{}', tolower(t)) eq true)".format(topic_value)
+            )
+        if publication_date_min:
+            filters.append(f"publication_date ge {publication_date_min}")
+        if publication_date_max:
+            filters.append(f"publication_date le {publication_date_max}")
+        if security_filter:
+            filters.append(security_filter)
+        return None if len(filters) == 0 else " and ".join(filters)
 
     async def search(
         self,
@@ -243,6 +263,8 @@ class Approach(ABC):
                         category=document.get("category"),
                         sourcepage=document.get("sourcepage"),
                         sourcefile=document.get("sourcefile"),
+                        publication_date=document.get("publication_date"),
+                        topic=document.get("topic"),
                         oids=document.get("oids"),
                         groups=document.get("groups"),
                         captions=cast(list[QueryCaptionResult], document.get("@search.captions")),

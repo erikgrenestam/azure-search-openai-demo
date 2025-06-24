@@ -39,6 +39,9 @@ export function Component(): JSX.Element {
     const [sendImageSources, setSendImageSources] = useState<boolean>(false);
     const [includeCategory, setIncludeCategory] = useState<string>("");
 
+    const [topic, setTopic] = useState<string>("");
+    const [publicationDateMin, setPublicationDateMin] = useState<string>("");
+    const [publicationDateMax, setPublicationDateMax] = useState<string>("");
     const [excludeCategory, setExcludeCategory] = useState<string>("");
     const [question, setQuestion] = useState<string>("");
     const [searchTextEmbeddings, setSearchTextEmbeddings] = useState<boolean>(true);
@@ -144,6 +147,9 @@ export function Component(): JSX.Element {
                         prompt_template_suffix: promptTemplateSuffix.length === 0 ? undefined : promptTemplateSuffix,
                         include_category: includeCategory.length === 0 ? undefined : includeCategory.join(","),
                         exclude_category: excludeCategory.length === 0 ? undefined : excludeCategory,
+                        topic: topic.length === 0 ? undefined : topic,
+                        publication_date_min: publicationDateMin.length === 0 ? undefined : publicationDateMin,
+                        publication_date_max: publicationDateMax.length === 0 ? undefined : publicationDateMax,
                         top: retrieveCount,
                         results_merge_strategy: resultsMergeStrategy,
                         temperature: temperature,
@@ -222,6 +228,15 @@ export function Component(): JSX.Element {
                 break;
             case "includeCategory":
                 setIncludeCategory(value);
+                break;
+            case "topic":
+                setTopic(value);
+                break;
+            case "publicationDateMin":
+                setPublicationDateMin(value);
+                break;
+            case "publicationDateMax":
+                setPublicationDateMax(value);
                 break;
             case "llmInputs":
                 break;
@@ -357,6 +372,9 @@ export function Component(): JSX.Element {
                     reasoningEffort={reasoningEffort}
                     excludeCategory={excludeCategory}
                     includeCategory={includeCategory}
+                    topic={topic}
+                    publicationDateMin={publicationDateMin}
+                    publicationDateMax={publicationDateMax}
                     retrievalMode={retrievalMode}
                     sendTextSources={sendTextSources}
                     sendImageSources={sendImageSources}

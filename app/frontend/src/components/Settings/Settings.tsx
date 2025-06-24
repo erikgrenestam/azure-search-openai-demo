@@ -1,6 +1,16 @@
 import { useId } from "@fluentui/react-hooks";
 import { useTranslation } from "react-i18next";
-import { TextField, ITextFieldProps, Checkbox, ICheckboxProps, Dropdown, IDropdownProps, IDropdownOption, Stack } from "@fluentui/react";
+import {
+    TextField,
+    ITextFieldProps,
+    Checkbox,
+    ICheckboxProps,
+    Dropdown,
+    IDropdownProps,
+    IDropdownOption,
+    DatePicker,
+    Label
+} from "@fluentui/react";
 import { HelpCallout } from "../HelpCallout";
 import { VectorSettings } from "../VectorSettings";
 import { RetrievalMode } from "../../api";
@@ -23,6 +33,9 @@ export interface SettingsProps {
     reasoningEffort: string;
     excludeCategory: string;
     includeCategory: string[];
+    topic: string;
+    publicationDateMin: string;
+    publicationDateMax: string;
     retrievalMode: RetrievalMode;
     sendTextSources: boolean;
     sendImageSources: boolean;
@@ -62,6 +75,9 @@ export const Settings = ({
     reasoningEffort,
     excludeCategory,
     includeCategory,
+    topic,
+    publicationDateMin,
+    publicationDateMax,
     retrievalMode,
     searchTextEmbeddings,
     searchImageEmbeddings,
@@ -108,6 +124,11 @@ export const Settings = ({
     const includeCategoryFieldId = useId("includeCategoryField");
     const excludeCategoryId = useId("excludeCategory");
     const excludeCategoryFieldId = useId("excludeCategoryField");
+    const topicId = useId("topic");
+    const topicFieldId = useId("topicField");
+    const publicationDateMinId = useId("publicationDateMin");
+    const publicationDateMaxId = useId("publicationDateMax");
+    const publicationDateRangeId = useId("publicationDateRange");
     const semanticRankerId = useId("semanticRanker");
     const semanticRankerFieldId = useId("semanticRankerField");
     const queryRewritingFieldId = useId("queryRewritingField");
@@ -265,6 +286,52 @@ export const Settings = ({
                 ]}
                 onRenderLabel={props => renderLabel(props, includeCategoryId, includeCategoryFieldId, t("helpTexts.includeCategory"))}
             />
+
+            <TextField
+                id={topicFieldId}
+                className={styles.settingsSeparator}
+                label={t("labels.topic")}
+                defaultValue={topic}
+                placeholder={t("helpTexts.topic")}
+                onChange={(_ev, val) => onChange("topic", val || "")}
+                aria-labelledby={topicId}
+                onRenderLabel={props => renderLabel(props, topicId, topicFieldId, t("helpTexts.topic"))}
+            />
+
+            {/* Publication date range with normal weight and spacing */}
+            <div className={styles.settingsSeparator}>
+                <Label
+                    id={publicationDateRangeId}
+                    className={styles.publicationDateRangeLabel}
+                >
+                    {t("labels.publicationDateRange")}
+                </Label>
+                <div
+                    className={styles.dateRangeContainer}
+                    aria-labelledby={publicationDateRangeId}
+                    role="group"
+                >
+                    <DatePicker
+                        id={publicationDateMinId}
+                        className={styles.datePickerNormalLabel}
+                        label={t("labels.publicationDateMin")}
+                        placeholder={t("labels.publicationDateMin")}
+                        value={publicationDateMin ? new Date(publicationDateMin) : undefined}
+                        onSelectDate={date => onChange("publicationDateMin", date ? date.toISOString().split("T")[0] : "")}
+                        aria-labelledby={publicationDateMinId}
+                    />
+                    <DatePicker
+                        id={publicationDateMaxId}
+                        className={styles.datePickerNormalLabel}
+                        label={t("labels.publicationDateMax")}
+                        placeholder={t("labels.publicationDateMax")}
+                        value={publicationDateMax ? new Date(publicationDateMax) : undefined}
+                        onSelectDate={date => onChange("publicationDateMax", date ? date.toISOString().split("T")[0] : "")}
+                        aria-labelledby={publicationDateMaxId}
+                    />
+                </div>
+            </div>
+
             <TextField
                 id={excludeCategoryFieldId}
                 className={styles.settingsSeparator}
