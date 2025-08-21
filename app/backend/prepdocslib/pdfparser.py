@@ -77,7 +77,7 @@ class DoclingPdfParser(Parser):
         )
 
         pipeline_options = PdfPipelineOptions()
-        pipeline_options.do_ocr = True
+        pipeline_options.do_ocr = False
         pipeline_options.do_table_structure = True
         #pipeline_options.do_picture_description = True
         #pipeline_options.picture_description_options = (
