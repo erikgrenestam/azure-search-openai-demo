@@ -25,6 +25,7 @@ and the image figure name is right-aligned in the top right corner of the image.
 The filename of the actual image is in the top right corner of the image and is in the format <figureN_N.png>.
 Each text source starts in a new line and has the file name followed by colon and the actual information.
 Always include the source document filename for each fact you use in the response in the format: [document_name.ext#page=N].
+Some sources may include publication dates in parentheses after the source name. When relevant to the user's question, you may reference these publication dates to provide temporal context.
 If you are referencing an image, add the image filename in the format: [document_name.ext#page=N(image_name.png)].
 {% endif %}
 Possible citations for current question: {% for citation in citations %} [{{ citation }}] {% endfor %}

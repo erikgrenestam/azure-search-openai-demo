@@ -350,6 +350,7 @@ class Approach(ABC):
                         category=ref.source_data.get("category"),
                         sourcepage=ref.source_data.get("sourcepage"),
                         sourcefile=ref.source_data.get("sourcefile"),
+                        publication_date=reference.source_data.get("publication_date"),
                         oids=ref.source_data.get("oids"),
                         groups=ref.source_data.get("groups"),
                         reranker_score=ref.reranker_score,
