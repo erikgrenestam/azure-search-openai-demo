@@ -343,6 +343,7 @@ class Approach(ABC):
                             id=reference.doc_key,
                             content=reference.source_data["content"],
                             sourcepage=reference.source_data["sourcepage"],
+                            publication_date=reference.source_data.get("publication_date"),
                             search_agent_query=activity_mapping[reference.activity_source],
                         )
                     )
@@ -358,16 +359,23 @@ class Approach(ABC):
         def nonewlines(s: str) -> str:
             return s.replace("\n", " ").replace("\r", " ")
 
+        def format_source_with_metadata(doc: Document, content: str) -> str:
+            source_info = self.get_citation((doc.sourcepage or ""), use_image_citation)
+            
+            # Add publication date if available
+            if doc.publication_date:
+                source_info += f" (Published: {doc.publication_date})"
+            
+            return source_info + ": " + nonewlines(content)
+
         if use_semantic_captions:
             return [
-                (self.get_citation((doc.sourcepage or ""), use_image_citation))
-                + ": "
-                + nonewlines(" . ".join([cast(str, c.text) for c in (doc.captions or [])]))
+                format_source_with_metadata(doc, " . ".join([cast(str, c.text) for c in (doc.captions or [])]))
                 for doc in results
             ]
         else:
             return [
-                (self.get_citation((doc.sourcepage or ""), use_image_citation)) + ": " + nonewlines(doc.content or "")
+                format_source_with_metadata(doc, doc.content or "")
                 for doc in results
             ]
 
