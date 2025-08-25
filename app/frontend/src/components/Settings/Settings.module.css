@@ -53,3 +53,21 @@
     font-weight: bold;
     color: #fff;
 }
+
+.dateRangeContainer {
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+}
+/* Publication date labels normal weight */
+.publicationDateRangeLabel {
+    font-weight: normal;
+}
+/* DatePicker label inside this root gets normal weight */
+.datePickerNormalLabel .ms-Label {
+    font-weight: normal;
+}
+/* Publication date labels normal weight */
+.dateRange label {
+    font-weight: normal;
+}

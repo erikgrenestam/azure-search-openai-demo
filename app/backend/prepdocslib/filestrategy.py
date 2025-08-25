@@ -1,4 +1,5 @@
 import logging
+import json  # Added import
 from typing import Optional
 
 from azure.core.credentials import AzureKeyCredential
@@ -19,6 +20,8 @@ async def parse_file(
     file_processors: dict[str, FileProcessor],
     category: Optional[str] = None,
     image_embeddings: Optional[ImageEmbeddings] = None,
+    publication_date: Optional[str] = None,
+    topic: Optional[list[str]] = None,
 ) -> list[Section]:
     key = file.file_extension().lower()
     processor = file_processors.get(key)
@@ -31,7 +34,8 @@ async def parse_file(
     if image_embeddings:
         logger.warning("Each page will be split into smaller chunks of text, but images will be of the entire page.")
     sections = [
-        Section(split_page, content=file, category=category) for split_page in processor.splitter.split_pages(pages)
+        Section(split_page, content=file, category=category, publication_date=publication_date, topic=topic)
+        for split_page in processor.splitter.split_pages(pages)
     ]
     return sections
 
@@ -99,10 +103,50 @@ class FileStrategy(Strategy):
     async def run(self):
         self.setup_search_manager()
         if self.document_action == DocumentAction.Add:
+            # Load metadata from JSON file
+            metadata_file_path = "c:\\projects\\DNRAG\\metadata\\all_metadata_combined.json"  # Adjusted path
+            try:
+                with open(metadata_file_path, 'r', encoding='utf-8') as f:
+                    all_metadata = json.load(f)
+                # Create a lookup map for faster access
+                metadata_lookup = {
+                    item.get("downloaded_filename"): {
+                        "content_type": item.get("content_type"),
+                        "publication_date": item.get("date"),
+                        "topic": item.get("topic"),
+                    }
+                    for item in all_metadata
+                }
+            except FileNotFoundError:
+                logger.error(f"Metadata file not found: {metadata_file_path}")
+                metadata_lookup = {}
+            except json.JSONDecodeError:
+                logger.error(f"Error decoding JSON from metadata file: {metadata_file_path}")
+                metadata_lookup = {}
+
             files = self.list_file_strategy.list()
             async for file in files:
                 try:
-                    sections = await parse_file(file, self.file_processors, self.category, self.image_embeddings)
+                    # Determine category for the current file
+                    metadata = metadata_lookup.get(file.filename())
+                    file_category = metadata.get("content_type") if metadata else None
+                    if not file_category:
+                        file_category = self.category  # Fallback to the global category
+
+                    publication_date = metadata.get("publication_date") if metadata else None
+                    if publication_date == '':
+                        publication_date = None
+                    topic_str = metadata.get("topic") if metadata else None
+                    topics = [t.strip() for t in topic_str.split(",")] if topic_str else []
+
+                    sections = await parse_file(
+                        file,
+                        self.file_processors,
+                        file_category,
+                        self.image_embeddings,
+                        publication_date,
+                        topics,
+                    )
                     if sections:
                         blob_sas_uris = await self.blob_manager.upload_blob(file)
                         blob_image_embeddings: Optional[list[list[float]]] = None

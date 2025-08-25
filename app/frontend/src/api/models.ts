@@ -23,6 +23,9 @@ export type ChatAppRequestOverrides = {
     query_rewriting?: boolean;
     reasoning_effort?: string;
     include_category?: string;
+    topic?: string;
+    publication_date_min?: string;
+    publication_date_max?: string;
     exclude_category?: string;
     seed?: number;
     top?: number;

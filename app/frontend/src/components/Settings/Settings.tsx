@@ -1,6 +1,16 @@
 import { useId } from "@fluentui/react-hooks";
 import { useTranslation } from "react-i18next";
-import { TextField, ITextFieldProps, Checkbox, ICheckboxProps, Dropdown, IDropdownProps, IDropdownOption } from "@fluentui/react";
+import {
+    TextField,
+    ITextFieldProps,
+    Checkbox,
+    ICheckboxProps,
+    Dropdown,
+    IDropdownProps,
+    IDropdownOption,
+    DatePicker,
+    Label
+} from "@fluentui/react";
 import { HelpCallout } from "../HelpCallout";
 import { GPT4VSettings } from "../GPT4VSettings";
 import { VectorSettings } from "../VectorSettings";
@@ -24,7 +34,10 @@ export interface SettingsProps {
     useQueryRewriting: boolean;
     reasoningEffort: string;
     excludeCategory: string;
-    includeCategory: string;
+    includeCategory: string[];
+    topic: string;
+    publicationDateMin: string;
+    publicationDateMax: string;
     retrievalMode: RetrievalMode;
     useGPT4V: boolean;
     gpt4vInput: GPT4VInput;
@@ -66,6 +79,9 @@ export const Settings = ({
     reasoningEffort,
     excludeCategory,
     includeCategory,
+    topic,
+    publicationDateMin,
+    publicationDateMax,
     retrievalMode,
     useGPT4V,
     gpt4vInput,
@@ -115,6 +131,11 @@ export const Settings = ({
     const includeCategoryFieldId = useId("includeCategoryField");
     const excludeCategoryId = useId("excludeCategory");
     const excludeCategoryFieldId = useId("excludeCategoryField");
+    const topicId = useId("topic");
+    const topicFieldId = useId("topicField");
+    const publicationDateMinId = useId("publicationDateMin");
+    const publicationDateMaxId = useId("publicationDateMax");
+    const publicationDateRangeId = useId("publicationDateRange");
     const semanticRankerId = useId("semanticRanker");
     const semanticRankerFieldId = useId("semanticRankerField");
     const queryRewritingFieldId = useId("queryRewritingField");
@@ -265,15 +286,86 @@ export const Settings = ({
                 id={includeCategoryFieldId}
                 className={styles.settingsSeparator}
                 label={t("labels.includeCategory")}
-                selectedKey={includeCategory}
-                onChange={(_ev?: React.FormEvent<HTMLElement | HTMLInputElement>, option?: IDropdownOption) => onChange("includeCategory", option?.key || "")}
+                selectedKeys={includeCategory.length > 0 ? includeCategory : [""]}
+                multiSelect
+                onChange={(_ev, option) => {
+                    if (option) {
+                        if (option.key === "" && option.selected) {
+                            onChange("includeCategory", []);
+                            return;
+                        }
+                        const newSelection = option.selected
+                            ? [...includeCategory, option.key as string]
+                            : includeCategory.filter(k => k !== option.key);
+
+                        onChange("includeCategory", newSelection.filter(k => k !== ""));
+                    }
+                }}
                 aria-labelledby={includeCategoryId}
                 options={[
-                    { key: "", text: t("labels.includeCategoryOptions.all") }
-                    // { key: "example", text: "Example Category" } // Add more categories as needed
+                    { key: "", text: t("labels.includeCategoryOptions.all") },
+                    { key: "Tale", text: "Tale" },
+                    { key: "Øvrige publikationer", text: "Øvrige publikationer" },
+                    { key: "Analyse", text: "Analyse" },
+                    { key: "Economic Memo", text: "Economic Memo" },
+                    { key: "Rapport", text: "Rapport" },
+                    { key: "Working Paper", text: "Working Paper" },
+                    { key: "Statistiknyhed", text: "Statistiknyhed" },
+                    { key: "Høringssvar", text: "Høringssvar" },
+                    { key: "Markedsmeddelelse", text: "Markedsmeddelelse" },
+                    { key: "Pressemeddelelse", text: "Pressemeddelelse" },
+                    { key: "Kommentarer m.m.", text: "Kommentarer m.m." },
+                    { key: "Tema", text: "Tema" },
+                    { key: "Nyt", text: "Nyt" },
+                    { key: "Podcast", text: "Podcast" }
                 ]}
                 onRenderLabel={props => renderLabel(props, includeCategoryId, includeCategoryFieldId, t("helpTexts.includeCategory"))}
             />
+
+            <TextField
+                id={topicFieldId}
+                className={styles.settingsSeparator}
+                label={t("labels.topic")}
+                defaultValue={topic}
+                placeholder={t("helpTexts.topic")}
+                onChange={(_ev, val) => onChange("topic", val || "")}
+                aria-labelledby={topicId}
+                onRenderLabel={props => renderLabel(props, topicId, topicFieldId, t("helpTexts.topic"))}
+            />
+
+            {/* Publication date range with normal weight and spacing */}
+            <div className={styles.settingsSeparator}>
+                <Label
+                    id={publicationDateRangeId}
+                    className={styles.publicationDateRangeLabel}
+                >
+                    {t("labels.publicationDateRange")}
+                </Label>
+                <div
+                    className={styles.dateRangeContainer}
+                    aria-labelledby={publicationDateRangeId}
+                    role="group"
+                >
+                    <DatePicker
+                        id={publicationDateMinId}
+                        className={styles.datePickerNormalLabel}
+                        label={t("labels.publicationDateMin")}
+                        placeholder={t("labels.publicationDateMin")}
+                        value={publicationDateMin ? new Date(publicationDateMin) : undefined}
+                        onSelectDate={date => onChange("publicationDateMin", date ? date.toISOString().split("T")[0] : "")}
+                        aria-labelledby={publicationDateMinId}
+                    />
+                    <DatePicker
+                        id={publicationDateMaxId}
+                        className={styles.datePickerNormalLabel}
+                        label={t("labels.publicationDateMax")}
+                        placeholder={t("labels.publicationDateMax")}
+                        value={publicationDateMax ? new Date(publicationDateMax) : undefined}
+                        onSelectDate={date => onChange("publicationDateMax", date ? date.toISOString().split("T")[0] : "")}
+                        aria-labelledby={publicationDateMaxId}
+                    />
+                </div>
+            </div>
 
             <TextField
                 id={excludeCategoryFieldId}

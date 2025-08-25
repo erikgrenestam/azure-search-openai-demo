@@ -38,7 +38,10 @@ export function Component(): JSX.Element {
     const [reasoningEffort, setReasoningEffort] = useState<string>("");
     const [useGPT4V, setUseGPT4V] = useState<boolean>(false);
     const [gpt4vInput, setGPT4VInput] = useState<GPT4VInput>(GPT4VInput.TextAndImages);
-    const [includeCategory, setIncludeCategory] = useState<string>("");
+    const [includeCategory, setIncludeCategory] = useState<string[]>([]);
+    const [topic, setTopic] = useState<string>("");
+    const [publicationDateMin, setPublicationDateMin] = useState<string>("");
+    const [publicationDateMax, setPublicationDateMax] = useState<string>("");
     const [excludeCategory, setExcludeCategory] = useState<string>("");
     const [question, setQuestion] = useState<string>("");
     const [vectorFields, setVectorFields] = useState<VectorFields>(VectorFields.TextAndImageEmbeddings);
@@ -136,8 +139,11 @@ export function Component(): JSX.Element {
                         prompt_template: promptTemplate.length === 0 ? undefined : promptTemplate,
                         prompt_template_prefix: promptTemplatePrefix.length === 0 ? undefined : promptTemplatePrefix,
                         prompt_template_suffix: promptTemplateSuffix.length === 0 ? undefined : promptTemplateSuffix,
-                        include_category: includeCategory.length === 0 ? undefined : includeCategory,
+                        include_category: includeCategory.length === 0 ? undefined : includeCategory.join(","),
                         exclude_category: excludeCategory.length === 0 ? undefined : excludeCategory,
+                        topic: topic.length === 0 ? undefined : topic,
+                        publication_date_min: publicationDateMin.length === 0 ? undefined : publicationDateMin,
+                        publication_date_max: publicationDateMax.length === 0 ? undefined : publicationDateMax,
                         top: retrieveCount,
                         max_subqueries: maxSubqueryCount,
                         results_merge_strategy: resultsMergeStrategy,
@@ -222,6 +228,15 @@ export function Component(): JSX.Element {
             case "includeCategory":
                 setIncludeCategory(value);
                 break;
+            case "topic":
+                setTopic(value);
+                break;
+            case "publicationDateMin":
+                setPublicationDateMin(value);
+                break;
+            case "publicationDateMax":
+                setPublicationDateMax(value);
+                break;
             case "useOidSecurityFilter":
                 setUseOidSecurityFilter(value);
                 break;
@@ -287,6 +302,7 @@ export function Component(): JSX.Element {
                 <div className={styles.commandsContainer}>
                     {showUserUpload && <UploadFile className={styles.commandButton} disabled={!loggedIn} />}
                     <SettingsButton className={styles.commandButton} onClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)} />
+                    {showLanguagePicker && <LanguagePicker onLanguageChange={newLang => i18n.changeLanguage(newLang)} />}
                 </div>
                 <h1 className={styles.askTitle}>{t("askTitle")}</h1>
                 <div className={styles.askQuestionInput}>
@@ -303,7 +319,6 @@ export function Component(): JSX.Element {
                 {isLoading && <Spinner label={t("generatingAnswer")} />}
                 {!lastQuestionRef.current && (
                     <div className={styles.askTopSection}>
-                        {showLanguagePicker && <LanguagePicker onLanguageChange={newLang => i18n.changeLanguage(newLang)} />}
                         <ExampleList onExampleClicked={onExampleClicked} useGPT4V={useGPT4V} />
                     </div>
                 )}
@@ -365,6 +380,9 @@ export function Component(): JSX.Element {
                     reasoningEffort={reasoningEffort}
                     excludeCategory={excludeCategory}
                     includeCategory={includeCategory}
+                    topic={topic}
+                    publicationDateMin={publicationDateMin}
+                    publicationDateMax={publicationDateMax}
                     retrievalMode={retrievalMode}
                     useGPT4V={useGPT4V}
                     gpt4vInput={gpt4vInput}
