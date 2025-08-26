@@ -98,36 +98,29 @@ class FileStrategy(Strategy):
         
         # First try to load from MSSQL database
         try:
-            connection_string = os.getenv("MSSQL_CONNECTION_STRING")
-            if connection_string:
-                logger.info("Attempting to load metadata from MSSQL database")
-                try:
-                    import pyodbc
-                    with pyodbc.connect(connection_string) as conn:
-                        cursor = conn.cursor()
-                        # Adjust the query based on your actual table structure
-                        query = """
-                        SELECT downloaded_filename, content_type, publication_date, topic 
-                        FROM metadata_table
-                        """
-                        cursor.execute(query)
-                        rows = cursor.fetchall()
-                        
-                        metadata_lookup = {
-                            row.downloaded_filename: {
-                                "content_type": row.content_type,
-                                "publication_date": row.publication_date,
-                                "topic": row.topic,
-                            }
-                            for row in rows
-                            if row.downloaded_filename
-                        }
-                        logger.info(f"Successfully loaded {len(metadata_lookup)} metadata records from MSSQL database")
-                        return metadata_lookup
-                except ImportError:
-                    logger.warning("pyodbc not available, falling back to JSON file for metadata")
-            else:
-                logger.info("No MSSQL connection string found, will try JSON file")
+            logger.info("Attempting to load metadata from MSSQL database")
+            try:
+                from dnsql import DNSQL
+
+                query = """
+                SELECT downloaded_filename, content_type, publication_date, topic 
+                FROM area102.dn_publication_metadata
+                """
+                metadata_df = DNSQL.execute_query(query)
+                
+                metadata_lookup = {
+                    row.downloaded_filename: {
+                        "content_type": row.content_type,
+                        "publication_date": row.publication_date,
+                        "topic": row.topic,
+                    }
+                    for row in metadata_df.iterrows()
+                    if row.downloaded_filename
+                }
+                logger.info(f"Successfully loaded {len(metadata_lookup)} metadata records from MSSQL database")
+                return metadata_lookup
+            except ImportError:
+                logger.warning("dnsql not available, falling back to JSON file for metadata")
         except Exception as e:
             logger.warning(f"Failed to load metadata from MSSQL database: {e}, falling back to JSON file")
         
