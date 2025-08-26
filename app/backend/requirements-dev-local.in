@@ -33,6 +33,7 @@ prompty
 rich
 typing-extensions
 docling==2.34.0
+pyodbc
 
 # Development dependencies
 ruff

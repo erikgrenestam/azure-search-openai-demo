@@ -1,5 +1,6 @@
 import logging
 import json  # Added import
+import os
 from typing import Optional
 
 from azure.core.credentials import AzureKeyCredential
@@ -86,6 +87,104 @@ class FileStrategy(Strategy):
             search_images=self.image_embeddings is not None,
         )
 
+    async def load_metadata_lookup(self) -> dict:
+        """
+        Load metadata lookup dictionary, first trying MSSQL database, then falling back to JSON file.
+        
+        Returns:
+            dict: Metadata lookup dictionary with filename as key and metadata as value
+        """
+        metadata_lookup = {}
+        
+        # First try to load from MSSQL database
+        try:
+            connection_string = os.getenv("MSSQL_CONNECTION_STRING")
+            if connection_string:
+                logger.info("Attempting to load metadata from MSSQL database")
+                try:
+                    import pyodbc
+                    with pyodbc.connect(connection_string) as conn:
+                        cursor = conn.cursor()
+                        # Adjust the query based on your actual table structure
+                        query = """
+                        SELECT downloaded_filename, content_type, publication_date, topic 
+                        FROM metadata_table
+                        """
+                        cursor.execute(query)
+                        rows = cursor.fetchall()
+                        
+                        metadata_lookup = {
+                            row.downloaded_filename: {
+                                "content_type": row.content_type,
+                                "publication_date": row.publication_date,
+                                "topic": row.topic,
+                            }
+                            for row in rows
+                            if row.downloaded_filename
+                        }
+                        logger.info(f"Successfully loaded {len(metadata_lookup)} metadata records from MSSQL database")
+                        return metadata_lookup
+                except ImportError:
+                    logger.warning("pyodbc not available, falling back to JSON file for metadata")
+            else:
+                logger.info("No MSSQL connection string found, will try JSON file")
+        except Exception as e:
+            logger.warning(f"Failed to load metadata from MSSQL database: {e}, falling back to JSON file")
+        
+        # Fallback: try to load from JSON file in the same directory as the files
+        try:
+            logger.info("Attempting to load metadata from JSON file")
+            
+            # Use the list_file_strategy to find metadata.json file
+            files = self.list_file_strategy.list()
+            metadata_file = None
+            
+            async for file in files:
+                try:
+                    if file.filename().lower() == "metadata.json":
+                        metadata_file = file
+                        break
+                finally:
+                    if file.filename().lower() != "metadata.json":
+                        file.close()
+            
+            if metadata_file:
+                logger.info(f"Found metadata.json file: {metadata_file.filename()}")
+                # Read the content properly depending on the type
+                if hasattr(metadata_file.content, 'read'):
+                    content_str = metadata_file.content.read()
+                    if isinstance(content_str, bytes):
+                        content_str = content_str.decode('utf-8')
+                else:
+                    content_str = str(metadata_file.content)
+                
+                metadata_content = json.loads(content_str)
+                metadata_file.close()
+                
+                # Create lookup dictionary from JSON content
+                if isinstance(metadata_content, list):
+                    metadata_lookup = {
+                        item.get("downloaded_filename"): {
+                            "content_type": item.get("content_type"),
+                            "publication_date": item.get("date"),
+                            "topic": item.get("topic"),
+                        }
+                        for item in metadata_content
+                        if item.get("downloaded_filename")
+                    }
+                else:
+                    # If it's a direct mapping
+                    metadata_lookup = metadata_content
+                
+                logger.info(f"Successfully loaded {len(metadata_lookup)} metadata records from JSON file")
+            else:
+                logger.warning("No metadata.json file found in the file directory")
+                
+        except Exception as e:
+            logger.error(f"Failed to load metadata from JSON file: {e}")
+        
+        return metadata_lookup
+
     async def setup(self):
         self.setup_search_manager()
         await self.search_manager.create_index()
@@ -103,30 +202,17 @@ class FileStrategy(Strategy):
     async def run(self):
         self.setup_search_manager()
         if self.document_action == DocumentAction.Add:
-            # Load metadata from JSON file
-            metadata_file_path = "c:\\projects\\DNRAG\\metadata\\all_metadata_combined.json"  # Adjusted path
-            try:
-                with open(metadata_file_path, 'r', encoding='utf-8') as f:
-                    all_metadata = json.load(f)
-                # Create a lookup map for faster access
-                metadata_lookup = {
-                    item.get("downloaded_filename"): {
-                        "content_type": item.get("content_type"),
-                        "publication_date": item.get("date"),
-                        "topic": item.get("topic"),
-                    }
-                    for item in all_metadata
-                }
-            except FileNotFoundError:
-                logger.error(f"Metadata file not found: {metadata_file_path}")
-                metadata_lookup = {}
-            except json.JSONDecodeError:
-                logger.error(f"Error decoding JSON from metadata file: {metadata_file_path}")
-                metadata_lookup = {}
+            # Load metadata using the new method
+            metadata_lookup = await self.load_metadata_lookup()
 
             files = self.list_file_strategy.list()
             async for file in files:
                 try:
+                    # Skip metadata.json file during processing
+                    if file.filename().lower() == "metadata.json":
+                        file.close()
+                        continue
+                        
                     # Determine category for the current file
                     metadata = metadata_lookup.get(file.filename())
                     file_category = metadata.get("content_type") if metadata else None
