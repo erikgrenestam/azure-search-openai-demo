@@ -114,7 +114,8 @@ class FileStrategy(Strategy):
                         "publication_date": row.publication_date,
                         "topic": row.topic,
                     }
-                    for row in metadata_df.iterrows()
+                    # Unpack the (index, row) tuple here
+                    for index, row in metadata_df.iterrows()
                     if row.downloaded_filename
                 }
                 logger.info(f"Successfully loaded {len(metadata_lookup)} metadata records from MSSQL database")
