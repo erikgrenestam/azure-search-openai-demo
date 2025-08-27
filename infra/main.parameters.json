@@ -96,7 +96,7 @@
       "value": "${AZURE_STORAGE_RESOURCE_GROUP}"
     },
     "storageSkuName": {
-      "value": "${AZURE_STORAGE_SKU=Standard_LRS}"
+      "value": "${AZURE_STORAGE_SKU=Standard_ZRS}"
     },
     "appServicePlanName": {
       "value": "${AZURE_APP_SERVICE_PLAN}"

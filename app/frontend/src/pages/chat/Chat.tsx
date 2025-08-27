@@ -4,7 +4,7 @@ import { Helmet } from "react-helmet-async";
 import { Panel, DefaultButton } from "@fluentui/react";
 import readNDJSONStream from "ndjson-readablestream";
 
-import appLogo from "../../assets/applogo.svg";
+import appLogo from "../../assets/dn_logo.svg";
 import styles from "./Chat.module.css";
 
 import {
@@ -51,11 +51,12 @@ const Chat = () => {
     const [retrievalMode, setRetrievalMode] = useState<RetrievalMode>(RetrievalMode.Hybrid);
     const [useSemanticRanker, setUseSemanticRanker] = useState<boolean>(true);
     const [useQueryRewriting, setUseQueryRewriting] = useState<boolean>(false);
-    const [reasoningEffort, setReasoningEffort] = useState<string>("");
-    const [streamingEnabled, setStreamingEnabled] = useState<boolean>(true);
-    const [shouldStream, setShouldStream] = useState<boolean>(true);
+    const [reasoningEffort, setReasoningEffort] = useState<string>("low");
     const [useSemanticCaptions, setUseSemanticCaptions] = useState<boolean>(false);
-    const [includeCategory, setIncludeCategory] = useState<string>("");
+    const [includeCategory, setIncludeCategory] = useState<string[]>([]);
+    const [topic, setTopic] = useState<string>("");
+    const [publicationDateMin, setPublicationDateMin] = useState<string>("");
+    const [publicationDateMax, setPublicationDateMax] = useState<string>("");
     const [excludeCategory, setExcludeCategory] = useState<string>("");
     const [useSuggestFollowupQuestions, setUseSuggestFollowupQuestions] = useState<boolean>(false);
     const [vectorFields, setVectorFields] = useState<VectorFields>(VectorFields.TextAndImageEmbeddings);
@@ -63,6 +64,8 @@ const Chat = () => {
     const [useGroupsSecurityFilter, setUseGroupsSecurityFilter] = useState<boolean>(false);
     const [gpt4vInput, setGPT4VInput] = useState<GPT4VInput>(GPT4VInput.TextAndImages);
     const [useGPT4V, setUseGPT4V] = useState<boolean>(false);
+    const [streamingEnabled, setStreamingEnabled] = useState<boolean>(true);
+    const [shouldStream, setShouldStream] = useState<boolean>(true);
 
     const lastQuestionRef = useRef<string>("");
     const chatMessageStreamEnd = useRef<HTMLDivElement | null>(null);
@@ -211,13 +214,19 @@ const Chat = () => {
                 { content: a[1].message.content, role: "assistant" }
             ]);
 
+            const includeCategoryValue = includeCategory.length === 0 ? undefined : includeCategory.join(",");
             const request: ChatAppRequest = {
                 messages: [...messages, { content: question, role: "user" }],
                 context: {
                     overrides: {
                         prompt_template: promptTemplate.length === 0 ? undefined : promptTemplate,
-                        include_category: includeCategory.length === 0 ? undefined : includeCategory,
+                        prompt_template_prefix: undefined,
+                        prompt_template_suffix: undefined,
                         exclude_category: excludeCategory.length === 0 ? undefined : excludeCategory,
+                        include_category: includeCategoryValue,
+                        topic: topic.length === 0 ? undefined : topic,
+                        publication_date_min: publicationDateMin.length === 0 ? undefined : publicationDateMin,
+                        publication_date_max: publicationDateMax.length === 0 ? undefined : publicationDateMax,
                         top: retrieveCount,
                         max_subqueries: maxSubqueryCount,
                         results_merge_strategy: resultsMergeStrategy,
@@ -339,6 +348,15 @@ const Chat = () => {
             case "includeCategory":
                 setIncludeCategory(value);
                 break;
+            case "topic":
+                setTopic(value);
+                break;
+            case "publicationDateMin":
+                setPublicationDateMin(value);
+                break;
+            case "publicationDateMax":
+                setPublicationDateMax(value);
+                break;
             case "useOidSecurityFilter":
                 setUseOidSecurityFilter(value);
                 break;
@@ -408,6 +426,7 @@ const Chat = () => {
                     )}
                 </div>
                 <div className={styles.commandsContainer}>
+                    {showLanguagePicker && <LanguagePicker onLanguageChange={newLang => i18n.changeLanguage(newLang)} />}
                     <ClearChatButton className={styles.commandButton} onClick={clearChat} disabled={!lastQuestionRef.current || isLoading} />
                     {showUserUpload && <UploadFile className={styles.commandButton} disabled={!loggedIn} />}
                     <SettingsButton className={styles.commandButton} onClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)} />
@@ -417,11 +436,10 @@ const Chat = () => {
                 <div className={styles.chatContainer}>
                     {!lastQuestionRef.current ? (
                         <div className={styles.chatEmptyState}>
-                            <img src={appLogo} alt="App logo" width="120" height="120" />
+                            <img src={appLogo} alt="DN logo" className={styles.chatEmptyStateLogo} />
 
                             <h1 className={styles.chatEmptyStateTitle}>{t("chatEmptyStateTitle")}</h1>
                             <h2 className={styles.chatEmptyStateSubtitle}>{t("chatEmptyStateSubtitle")}</h2>
-                            {showLanguagePicker && <LanguagePicker onLanguageChange={newLang => i18n.changeLanguage(newLang)} />}
 
                             <ExampleList onExampleClicked={onExampleClicked} useGPT4V={useGPT4V} />
                         </div>
@@ -553,6 +571,9 @@ const Chat = () => {
                         reasoningEffort={reasoningEffort}
                         excludeCategory={excludeCategory}
                         includeCategory={includeCategory}
+                        topic={topic}
+                        publicationDateMin={publicationDateMin}
+                        publicationDateMax={publicationDateMax}
                         retrievalMode={retrievalMode}
                         useGPT4V={useGPT4V}
                         gpt4vInput={gpt4vInput}
@@ -562,6 +583,7 @@ const Chat = () => {
                         showReasoningEffortOption={showReasoningEffortOption}
                         showGPT4VOptions={showGPT4VOptions}
                         showVectorOption={showVectorOption}
+                        useSuggestFollowupQuestions={useSuggestFollowupQuestions}
                         useOidSecurityFilter={useOidSecurityFilter}
                         useGroupsSecurityFilter={useGroupsSecurityFilter}
                         useLogin={!!useLogin}
@@ -569,7 +591,6 @@ const Chat = () => {
                         requireAccessControl={requireAccessControl}
                         shouldStream={shouldStream}
                         streamingEnabled={streamingEnabled}
-                        useSuggestFollowupQuestions={useSuggestFollowupQuestions}
                         showSuggestFollowupQuestions={true}
                         showAgenticRetrievalOption={showAgenticRetrievalOption}
                         useAgenticRetrieval={useAgenticRetrieval}

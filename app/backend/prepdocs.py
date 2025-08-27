@@ -31,10 +31,10 @@ from prepdocslib.listfilestrategy import (
     LocalListFileStrategy,
 )
 from prepdocslib.parser import Parser
-from prepdocslib.pdfparser import DocumentAnalysisParser, LocalPdfParser
+from prepdocslib.pdfparser import DocumentAnalysisParser, LocalPdfParser, DoclingPdfParser
 from prepdocslib.strategy import DocumentAction, SearchInfo, Strategy
 from prepdocslib.textparser import TextParser
-from prepdocslib.textsplitter import SentenceTextSplitter, SimpleTextSplitter
+from prepdocslib.textsplitter import SentenceTextSplitter, SimpleTextSplitter, DoclingDummySplitter
 
 logger = logging.getLogger("scripts")
 
@@ -193,7 +193,7 @@ def setup_file_processors(
     use_content_understanding: bool = False,
     content_understanding_endpoint: Union[str, None] = None,
 ):
-    sentence_text_splitter = SentenceTextSplitter()
+    sentence_text_splitter = DoclingDummySplitter()
 
     doc_int_parser: Optional[DocumentAnalysisParser] = None
     # check if Azure Document Intelligence credentials are provided
@@ -210,7 +210,7 @@ def setup_file_processors(
 
     pdf_parser: Optional[Parser] = None
     if local_pdf_parser or document_intelligence_service is None:
-        pdf_parser = LocalPdfParser()
+        pdf_parser = DoclingPdfParser()
     elif document_intelligence_service is not None:
         pdf_parser = doc_int_parser
     else:

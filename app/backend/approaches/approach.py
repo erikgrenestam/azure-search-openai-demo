@@ -42,6 +42,8 @@ class Document:
     id: Optional[str] = None
     content: Optional[str] = None
     category: Optional[str] = None
+    publication_date: Optional[str] = None
+    topic: Optional[list[str]] = None
     sourcepage: Optional[str] = None
     sourcefile: Optional[str] = None
     oids: Optional[list[str]] = None
@@ -56,6 +58,8 @@ class Document:
             "id": self.id,
             "content": self.content,
             "category": self.category,
+            "publication_date": self.publication_date,
+            "topic": self.topic,
             "sourcepage": self.sourcepage,
             "sourcefile": self.sourcefile,
             "oids": self.oids,
@@ -181,12 +185,23 @@ class Approach(ABC):
     def build_filter(self, overrides: dict[str, Any], auth_claims: dict[str, Any]) -> Optional[str]:
         include_category = overrides.get("include_category")
         exclude_category = overrides.get("exclude_category")
+        topic = overrides.get("topic")
+        publication_date_min = overrides.get("publication_date_min")
+        publication_date_max = overrides.get("publication_date_max")
         security_filter = self.auth_helper.build_security_filters(overrides, auth_claims)
         filters = []
         if include_category:
-            filters.append("category eq '{}'".format(include_category.replace("'", "''")))
+            filters.append("search.in(category, '{}', ',')".format(include_category.replace("'", "''")))
         if exclude_category:
             filters.append("category ne '{}'".format(exclude_category.replace("'", "''")))
+        if topic:
+            filters.append(
+                "topic/any(t: search.in(t, '{}', ','))".format(topic.replace("'", "''"))
+            )
+        if publication_date_min:
+            filters.append(f"publication_date ge {publication_date_min}")
+        if publication_date_max:
+            filters.append(f"publication_date le {publication_date_max}")
         if security_filter:
             filters.append(security_filter)
         return None if len(filters) == 0 else " and ".join(filters)
@@ -205,45 +220,55 @@ class Approach(ABC):
         minimum_reranker_score: Optional[float] = None,
         use_query_rewriting: Optional[bool] = None,
     ) -> list[Document]:
-        search_text = query_text if use_text_search else ""
-        search_vectors = vectors if use_vector_search else []
-        if use_semantic_ranker:
-            results = await self.search_client.search(
-                search_text=search_text,
-                filter=filter,
-                top=top,
-                query_caption="extractive|highlight-false" if use_semantic_captions else None,
-                query_rewrites="generative" if use_query_rewriting else None,
-                vector_queries=search_vectors,
-                query_type=QueryType.SEMANTIC,
-                query_language=self.query_language,
-                query_speller=self.query_speller,
-                semantic_configuration_name="default",
-                semantic_query=query_text,
-            )
+        if use_semantic_ranker and use_text_search:
+            query_type = QueryType.SEMANTIC
         else:
-            results = await self.search_client.search(
-                search_text=search_text,
-                filter=filter,
-                top=top,
-                vector_queries=search_vectors,
-            )
+            query_type = QueryType.SIMPLE
+
+        select = [
+            "id",
+            "content",
+            "category",
+            "publication_date",
+            "topic",
+            "sourcepage",
+            "sourcefile",
+            "oids",
+            "groups",
+        ]
+
+        r = await self.search_client.search(
+            search_text=query_text,
+            filter=filter,
+            top=top,
+            query_caption="extractive|highlight-false" if use_semantic_captions else None,
+            query_rewrites="generative" if use_query_rewriting else None,
+            vector_queries=vectors if use_vector_search else [],
+            query_type=query_type,
+            query_language=self.query_language,
+            query_speller=self.query_speller,
+            semantic_configuration_name="default",
+            semantic_query=query_text,
+            select=select,
+        )
 
         documents = []
-        async for page in results.by_page():
-            async for document in page:
+        async for page in r.by_page():
+            async for doc in page:
                 documents.append(
                     Document(
-                        id=document.get("id"),
-                        content=document.get("content"),
-                        category=document.get("category"),
-                        sourcepage=document.get("sourcepage"),
-                        sourcefile=document.get("sourcefile"),
-                        oids=document.get("oids"),
-                        groups=document.get("groups"),
-                        captions=cast(list[QueryCaptionResult], document.get("@search.captions")),
-                        score=document.get("@search.score"),
-                        reranker_score=document.get("@search.reranker_score"),
+                        id=doc["id"],
+                        content=doc["content"],
+                        category=doc["category"],
+                        publication_date=doc.get("publication_date"),
+                        topic=doc.get("topic"),
+                        sourcepage=doc["sourcepage"],
+                        sourcefile=doc["sourcefile"],
+                        oids=doc.get("oids"),
+                        groups=doc.get("groups"),
+                        captions=cast(list[QueryCaptionResult], doc.get("@search.captions")),
+                        score=doc.get("@search.score"),
+                        reranker_score=doc.get("@search.reranker_score"),
                     )
                 )
 
@@ -318,6 +343,7 @@ class Approach(ABC):
                             id=reference.doc_key,
                             content=reference.source_data["content"],
                             sourcepage=reference.source_data["sourcepage"],
+                            publication_date=reference.source_data.get("publication_date"),
                             search_agent_query=activity_mapping[reference.activity_source],
                         )
                     )
@@ -333,16 +359,23 @@ class Approach(ABC):
         def nonewlines(s: str) -> str:
             return s.replace("\n", " ").replace("\r", " ")
 
+        def format_source_with_metadata(doc: Document, content: str) -> str:
+            source_info = self.get_citation((doc.sourcepage or ""), use_image_citation)
+            
+            # Add publication date if available
+            if doc.publication_date:
+                source_info += f" (Published: {doc.publication_date})"
+            
+            return source_info + ": " + nonewlines(content)
+
         if use_semantic_captions:
             return [
-                (self.get_citation((doc.sourcepage or ""), use_image_citation))
-                + ": "
-                + nonewlines(" . ".join([cast(str, c.text) for c in (doc.captions or [])]))
+                format_source_with_metadata(doc, " . ".join([cast(str, c.text) for c in (doc.captions or [])]))
                 for doc in results
             ]
         else:
             return [
-                (self.get_citation((doc.sourcepage or ""), use_image_citation)) + ": " + nonewlines(doc.content or "")
+                format_source_with_metadata(doc, doc.content or "")
                 for doc in results
             ]
 

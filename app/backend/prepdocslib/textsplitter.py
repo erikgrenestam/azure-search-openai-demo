@@ -82,6 +82,16 @@ DEFAULT_OVERLAP_PERCENT = 10  # See semantic search article for 10% overlap perf
 DEFAULT_SECTION_LENGTH = 1000  # Roughly 400-500 tokens for English
 
 
+class DoclingDummySplitter(TextSplitter):
+    """
+    Splits pages using Docling's HybridChunker with a tiktoken tokenizer.
+    """
+
+    def split_pages(self, pages: list[Page]) -> Generator[SplitPage, None, None]:
+        for page in pages:
+            yield SplitPage(page_num=page.page_num, text=page.text)
+
+
 class SentenceTextSplitter(TextSplitter):
     """
     Class that splits pages into smaller chunks. This is required because embedding models may not be able to analyze an entire page at once
