@@ -288,7 +288,6 @@ def setup_file_processors(
     pdf_parser: Optional[Parser] = None
     if local_pdf_parser or document_intelligence_service is None:
         pdf_parser = DoclingPdfParser()
-        pdf_parser = DoclingPdfParser()
     elif document_intelligence_service is not None:
         pdf_parser = doc_int_parser
     else:

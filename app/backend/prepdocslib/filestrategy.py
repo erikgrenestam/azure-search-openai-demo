@@ -210,10 +210,7 @@ class FileStrategy(Strategy):
     async def run(self):
         self.setup_search_manager()
         if self.document_action == DocumentAction.Add:
-            # Load metadata using the new method
-            metadata_lookup = await self.load_metadata_lookup()
-
-            # Load metadata using the new method
+            # Load metadata
             metadata_lookup = await self.load_metadata_lookup()
 
             files = self.list_file_strategy.list()
@@ -235,7 +232,7 @@ class FileStrategy(Strategy):
                         publication_date = None
                     topic_str = metadata.get("topic") if metadata else None
                     topics = [t.strip() for t in topic_str.split(",")] if topic_str else []
-
+                    await self.blob_manager.upload_blob(file)
                     sections = await parse_file(
                         file=file,
                         file_processors=self.file_processors,
