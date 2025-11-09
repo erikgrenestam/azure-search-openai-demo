@@ -199,7 +199,6 @@ class Approach(ABC):
         topic = overrides.get("topic")
         publication_date_min = overrides.get("publication_date_min")
         publication_date_max = overrides.get("publication_date_max")
-        security_filter = self.auth_helper.build_security_filters(overrides, auth_claims)
         filters = []
         if include_category:
             filters.append("search.in(category, '{}', ',')".format(include_category.replace("'", "''")))
@@ -222,8 +221,6 @@ class Approach(ABC):
             filters.append(f"publication_date ge {publication_date_min}")
         if publication_date_max:
             filters.append(f"publication_date le {publication_date_max}")
-        if security_filter:
-            filters.append(security_filter)
         return None if len(filters) == 0 else " and ".join(filters)
 
     async def search(
