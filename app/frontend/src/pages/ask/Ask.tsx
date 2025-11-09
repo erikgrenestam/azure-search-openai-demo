@@ -37,7 +37,7 @@ export function Component(): JSX.Element {
     const [reasoningEffort, setReasoningEffort] = useState<string>("");
     const [sendTextSources, setSendTextSources] = useState<boolean>(true);
     const [sendImageSources, setSendImageSources] = useState<boolean>(false);
-    const [includeCategory, setIncludeCategory] = useState<string>("");
+    const [includeCategory, setIncludeCategory] = useState<string[]>([]);
 
     const [topic, setTopic] = useState<string>("");
     const [publicationDateMin, setPublicationDateMin] = useState<string>("");
@@ -146,11 +146,7 @@ export function Component(): JSX.Element {
                         prompt_template_prefix: promptTemplatePrefix.length === 0 ? undefined : promptTemplatePrefix,
                         prompt_template_suffix: promptTemplateSuffix.length === 0 ? undefined : promptTemplateSuffix,
                         include_category: includeCategory.length === 0 ? undefined : includeCategory.join(","),
-                        include_category: includeCategory.length === 0 ? undefined : includeCategory.join(","),
                         exclude_category: excludeCategory.length === 0 ? undefined : excludeCategory,
-                        topic: topic.length === 0 ? undefined : topic,
-                        publication_date_min: publicationDateMin.length === 0 ? undefined : publicationDateMin,
-                        publication_date_max: publicationDateMax.length === 0 ? undefined : publicationDateMax,
                         topic: topic.length === 0 ? undefined : topic,
                         publication_date_min: publicationDateMin.length === 0 ? undefined : publicationDateMin,
                         publication_date_max: publicationDateMax.length === 0 ? undefined : publicationDateMax,
@@ -377,9 +373,6 @@ export function Component(): JSX.Element {
                     reasoningEffort={reasoningEffort}
                     excludeCategory={excludeCategory}
                     includeCategory={includeCategory}
-                    topic={topic}
-                    publicationDateMin={publicationDateMin}
-                    publicationDateMax={publicationDateMax}
                     topic={topic}
                     publicationDateMin={publicationDateMin}
                     publicationDateMax={publicationDateMax}

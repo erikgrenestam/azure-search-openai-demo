@@ -9,7 +9,8 @@ import {
     IDropdownProps,
     IDropdownOption,
     DatePicker,
-    Label
+    Label,
+    Stack
 } from "@fluentui/react";
 import { HelpCallout } from "../HelpCallout";
 import { VectorSettings } from "../VectorSettings";

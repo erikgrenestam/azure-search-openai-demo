@@ -5,7 +5,6 @@ import { Panel, DefaultButton } from "@fluentui/react";
 import readNDJSONStream from "ndjson-readablestream";
 
 import appLogo from "../../assets/dn_logo.svg";
-import appLogo from "../../assets/dn_logo.svg";
 import styles from "./Chat.module.css";
 
 import { chatApi, configApi, RetrievalMode, ChatAppResponse, ChatAppResponseOrError, ChatAppRequest, ResponseMessage, SpeechConfig } from "../../api";
@@ -41,12 +40,7 @@ const Chat = () => {
     const [useSemanticRanker, setUseSemanticRanker] = useState<boolean>(true);
     const [useQueryRewriting, setUseQueryRewriting] = useState<boolean>(false);
     const [reasoningEffort, setReasoningEffort] = useState<string>("low");
-    const [reasoningEffort, setReasoningEffort] = useState<string>("low");
     const [useSemanticCaptions, setUseSemanticCaptions] = useState<boolean>(false);
-    const [includeCategory, setIncludeCategory] = useState<string[]>([]);
-    const [topic, setTopic] = useState<string>("");
-    const [publicationDateMin, setPublicationDateMin] = useState<string>("");
-    const [publicationDateMax, setPublicationDateMax] = useState<string>("");
     const [includeCategory, setIncludeCategory] = useState<string[]>([]);
     const [topic, setTopic] = useState<string>("");
     const [publicationDateMin, setPublicationDateMin] = useState<string>("");
@@ -57,6 +51,10 @@ const Chat = () => {
     const [searchImageEmbeddings, setSearchImageEmbeddings] = useState<boolean>(false);
     const [sendTextSources, setSendTextSources] = useState<boolean>(true);
     const [sendImageSources, setSendImageSources] = useState<boolean>(false);
+    const [shouldStream, setShouldStream] = useState<boolean>(false);
+    const [streamingEnabled, setStreamingEnabled] = useState<boolean>(false);
+    const [useOidSecurityFilter, setUseOidSecurityFilter] = useState<boolean>(false);
+    const [useGroupsSecurityFilter, setUseGroupsSecurityFilter] = useState<boolean>(false);
 
     const lastQuestionRef = useRef<string>("");
     const chatMessageStreamEnd = useRef<HTMLDivElement | null>(null);
@@ -210,7 +208,6 @@ const Chat = () => {
             ]);
 
             const includeCategoryValue = includeCategory.length === 0 ? undefined : includeCategory.join(",");
-            const includeCategoryValue = includeCategory.length === 0 ? undefined : includeCategory.join(",");
             const request: ChatAppRequest = {
                 messages: [...messages, { content: question, role: "user" }],
                 context: {
@@ -218,13 +215,7 @@ const Chat = () => {
                         prompt_template: promptTemplate.length === 0 ? undefined : promptTemplate,
                         prompt_template_prefix: undefined,
                         prompt_template_suffix: undefined,
-                        prompt_template_prefix: undefined,
-                        prompt_template_suffix: undefined,
                         exclude_category: excludeCategory.length === 0 ? undefined : excludeCategory,
-                        include_category: includeCategoryValue,
-                        topic: topic.length === 0 ? undefined : topic,
-                        publication_date_min: publicationDateMin.length === 0 ? undefined : publicationDateMin,
-                        publication_date_max: publicationDateMax.length === 0 ? undefined : publicationDateMax,
                         include_category: includeCategoryValue,
                         topic: topic.length === 0 ? undefined : topic,
                         publication_date_min: publicationDateMin.length === 0 ? undefined : publicationDateMin,
@@ -344,15 +335,6 @@ const Chat = () => {
                 break;
             case "includeCategory":
                 setIncludeCategory(value);
-                break;
-            case "topic":
-                setTopic(value);
-                break;
-            case "publicationDateMin":
-                setPublicationDateMin(value);
-                break;
-            case "publicationDateMax":
-                setPublicationDateMax(value);
                 break;
             case "topic":
                 setTopic(value);
@@ -584,9 +566,6 @@ const Chat = () => {
                         reasoningEffort={reasoningEffort}
                         excludeCategory={excludeCategory}
                         includeCategory={includeCategory}
-                        topic={topic}
-                        publicationDateMin={publicationDateMin}
-                        publicationDateMax={publicationDateMax}
                         topic={topic}
                         publicationDateMin={publicationDateMin}
                         publicationDateMax={publicationDateMax}
