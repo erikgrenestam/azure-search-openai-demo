@@ -90,9 +90,9 @@ class DoclingDummySplitter(TextSplitter):
     Splits pages using Docling's HybridChunker with a tiktoken tokenizer.
     """
 
-    def split_pages(self, pages: list[Page]) -> Generator[SplitPage, None, None]:
+    def split_pages(self, pages: list[Page]) -> Generator[Chunk, None, None]:
         for page in pages:
-            yield SplitPage(page_num=page.page_num, text=page.text)
+            yield Chunk(page_num=page.page_num, text=page.text)
 
 
 def _safe_concat(a: str, b: str) -> str:
