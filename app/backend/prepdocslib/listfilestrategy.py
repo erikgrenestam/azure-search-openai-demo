@@ -84,6 +84,10 @@ class ListFileStrategy(ABC):
         if False:  # pragma: no cover - this is necessary for mypy to type check
             yield
 
+    def write_md5(self, path: str) -> None:
+        """Write the MD5 hash for a file after it has been successfully processed. Default implementation does nothing."""
+        pass
+
 
 class LocalListFileStrategy(ListFileStrategy):
     """
@@ -131,11 +135,17 @@ class LocalListFileStrategy(ListFileStrategy):
             logger.info("Skipping '%s', no changes detected.", path)
             return True
 
-        # Write the hash
+        # Don't write the hash here - it should be written after successful processing
+        return False
+
+    def write_md5(self, path: str) -> None:
+        """Write the MD5 hash for a file after it has been successfully processed."""
+        with open(path, "rb") as file:
+            existing_hash = hashlib.md5(file.read()).hexdigest()
+        hash_path = f"{path}.md5"
         with open(hash_path, "w", encoding="utf-8") as md5_f:
             md5_f.write(existing_hash)
-
-        return False
+        logger.info("Written MD5 hash for processed file: %s", path)
 
 
 class ADLSGen2ListFileStrategy(ListFileStrategy):

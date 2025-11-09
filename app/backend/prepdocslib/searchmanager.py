@@ -62,8 +62,6 @@ class Section:
         self.category = category
         self.publication_date = publication_date
         self.topic = topic
-        self.publication_date = publication_date
-        self.topic = topic
 
 
 class SearchManager:
@@ -260,13 +258,6 @@ class SearchManager:
                         analyzer_name=self.search_analyzer_name,
                     ),
                     SimpleField(name="category", type="Edm.String", filterable=True, facetable=True),
-                    SimpleField(name="publication_date", type=SearchFieldDataType.DateTimeOffset, filterable=True, facetable=True, sortable=True),
-                    SearchField(
-                        name="topic",
-                        type=SearchFieldDataType.Collection(SearchFieldDataType.String),
-                        filterable=True,
-                        facetable=True,
-                    ),
                     SimpleField(name="publication_date", type=SearchFieldDataType.DateTimeOffset, filterable=True, facetable=True, sortable=True),
                     SearchField(
                         name="topic",
@@ -559,7 +550,7 @@ class SearchManager:
                                 {
                                     "url": image.url,
                                     "description": image.description,
-                                    "boundingbox": image.bbox,
+                                    "boundingbox": list(image.bbox),  # Convert tuple to list for Collection field
                                     "embedding": image.embedding,
                                 }
                                 for image in section.chunk.images

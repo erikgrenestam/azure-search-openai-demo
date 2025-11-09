@@ -168,6 +168,9 @@ class IntegratedVectorizerStrategy(Strategy):  # pragma: no cover
             async for file in files:
                 try:
                     await self.blob_manager.upload_blob(file)
+                    # Write MD5 hash after successful upload
+                    if file.url:
+                        self.list_file_strategy.write_md5(file.url)
                 finally:
                     if file:
                         file.close()

@@ -237,16 +237,20 @@ class FileStrategy(Strategy):
                     topics = [t.strip() for t in topic_str.split(",")] if topic_str else []
 
                     sections = await parse_file(
-                        file,
-                        self.file_processors,
-                        file_category,
-                        self.blob_manager,
-                        self.image_embeddings,
-                        publication_date,
-                        topics
+                        file=file,
+                        file_processors=self.file_processors,
+                        category=file_category,
+                        blob_manager=self.blob_manager,
+                        image_embeddings_client=self.image_embeddings,
+                        user_oid=None,
+                        publication_date=publication_date,
+                        topic=topics
                     )
                     if sections:
                         await self.search_manager.update_content(sections, url=file.url)
+                        # Write MD5 hash after successful processing
+                        if hasattr(self.list_file_strategy, 'write_md5') and file.url:
+                            self.list_file_strategy.write_md5(file.url)
                 finally:
                     if file:
                         file.close()
@@ -294,7 +298,14 @@ class UploadUserFileStrategy:
 
     async def add_file(self, file: File, user_oid: str):
         sections = await parse_file(
-            file, self.file_processors, None, self.blob_manager, self.image_embeddings, user_oid=user_oid
+            file=file, 
+            file_processors=self.file_processors, 
+            category=None, 
+            blob_manager=self.blob_manager, 
+            image_embeddings_client=self.image_embeddings, 
+            user_oid=user_oid,
+            publication_date=None,
+            topic=None
         )
         if sections:
             await self.search_manager.update_content(sections, url=file.url)

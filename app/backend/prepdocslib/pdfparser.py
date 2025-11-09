@@ -21,18 +21,21 @@ from openai import AsyncOpenAI
 from PIL import Image
 from pypdf import PdfReader
 
-from docling.datamodel.base_models import DocumentStream
-from docling.document_converter import DocumentConverter, PdfFormatOption
-from docling.chunking import HybridChunker
-import tiktoken
-from docling_core.transforms.chunker.tokenizer.openai import OpenAITokenizer
-from docling.datamodel.base_models import InputFormat
-from docling.datamodel.pipeline_options import (
-    PdfPipelineOptions,
-    AcceleratorDevice,
-    AcceleratorOptions,
-    smolvlm_picture_description
-)
+try:
+    from docling.datamodel.base_models import DocumentStream
+    from docling.document_converter import DocumentConverter, PdfFormatOption
+    from docling.chunking import HybridChunker
+    import tiktoken
+    from docling_core.transforms.chunker.tokenizer.openai import OpenAITokenizer
+    from docling.datamodel.base_models import InputFormat
+    from docling.datamodel.pipeline_options import (
+        PdfPipelineOptions,
+        AcceleratorDevice,
+        AcceleratorOptions,
+        smolvlm_picture_description
+    )
+except ModuleNotFoundError:
+    pass
 
 from .mediadescriber import (
     ContentUnderstandingDescriber,

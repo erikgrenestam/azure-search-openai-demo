@@ -58,7 +58,7 @@ azure-monitor-opentelemetry==1.7.0
     # via -r requirements-dev-local.in
 azure-monitor-opentelemetry-exporter==1.0.0b41
     # via azure-monitor-opentelemetry
-azure-search-documents==11.6.0b12
+azure-search-documents==11.7.0b1
     # via -r requirements-dev-local.in
 azure-storage-blob==12.26.0
     # via
@@ -117,7 +117,7 @@ cryptography==45.0.6
     #   azure-storage-blob
     #   msal
     #   pyjwt
-docling==2.34.0
+docling==2.61.1
 diff-cover==9.6.0
     # via -r requirements-dev-local.in
 distlib==0.4.0
