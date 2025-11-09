@@ -213,6 +213,9 @@ class FileStrategy(Strategy):
             # Load metadata using the new method
             metadata_lookup = await self.load_metadata_lookup()
 
+            # Load metadata using the new method
+            metadata_lookup = await self.load_metadata_lookup()
+
             files = self.list_file_strategy.list()
             async for file in files:
                 try:

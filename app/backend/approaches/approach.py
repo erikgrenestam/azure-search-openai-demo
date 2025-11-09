@@ -43,6 +43,8 @@ class Document:
     category: Optional[str] = None
     publication_date: Optional[str] = None
     topic: Optional[list[str]] = None
+    publication_date: Optional[str] = None
+    topic: Optional[list[str]] = None
     sourcepage: Optional[str] = None
     sourcefile: Optional[str] = None
     oids: Optional[list[str]] = None
@@ -58,6 +60,8 @@ class Document:
             "id": self.id,
             "content": self.content,
             "category": self.category,
+            "publication_date": self.publication_date,
+            "topic": self.topic,
             "publication_date": self.publication_date,
             "topic": self.topic,
             "sourcepage": self.sourcepage,
@@ -192,12 +196,24 @@ class Approach(ABC):
         topic = overrides.get("topic")
         publication_date_min = overrides.get("publication_date_min")
         publication_date_max = overrides.get("publication_date_max")
+        topic = overrides.get("topic")
+        publication_date_min = overrides.get("publication_date_min")
+        publication_date_max = overrides.get("publication_date_max")
         security_filter = self.auth_helper.build_security_filters(overrides, auth_claims)
         filters = []
         if include_category:
             filters.append("search.in(category, '{}', ',')".format(include_category.replace("'", "''")))
+            filters.append("search.in(category, '{}', ',')".format(include_category.replace("'", "''")))
         if exclude_category:
             filters.append("category ne '{}'".format(exclude_category.replace("'", "''")))
+        if topic:
+            filters.append(
+                "topic/any(t: search.in(t, '{}', ','))".format(topic.replace("'", "''"))
+            )
+        if publication_date_min:
+            filters.append(f"publication_date ge {publication_date_min}")
+        if publication_date_max:
+            filters.append(f"publication_date le {publication_date_max}")
         if topic:
             filters.append(
                 "topic/any(t: search.in(t, '{}', ','))".format(topic.replace("'", "''"))

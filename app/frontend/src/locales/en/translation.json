@@ -1,6 +1,8 @@
 {
     "pageTitle": "DN document chat",
     "headerTitle": "DN document chat",
+    "pageTitle": "DN document chat",
+    "headerTitle": "DN document chat",
     "chat": "Chat",
     "qa": "Ask a question",
     "login": "Login",
@@ -33,10 +35,16 @@
         "fileDeleted": "File deleted"
     },
     "developerSettings": "Settings",
+    "developerSettings": "Settings",
 
+    "chatEmptyStateTitle": "Ask about our publications",
     "chatEmptyStateTitle": "Ask about our publications",
     "chatEmptyStateSubtitle": "Ask anything or try an example",
     "defaultExamples": {
+        "1": "How popular is Apple Pay in Denmark?",
+        "2": "What was our latest GDP forecast?",
+        "3": "What have we written about the CCyB?",
+        "placeholder": "Type a new question"
         "1": "How popular is Apple Pay in Denmark?",
         "2": "What was our latest GDP forecast?",
         "3": "What have we written about the CCyB?",
@@ -97,6 +105,10 @@
         "publicationDateMin": "From date",
         "publicationDateMax": "To date",
         "topic": "Topic",
+        "publicationDateRange": "Publication date",
+        "publicationDateMin": "From date",
+        "publicationDateMax": "To date",
+        "topic": "Topic",
         "useSemanticRanker": "Use semantic ranker for retrieval",
         "useSemanticCaptions": "Use semantic captions",
         "useQueryRewriting": "Use query rewriting for retrieval",
@@ -153,6 +165,7 @@
             "Specifies a category to include in the search results. There are no categories used in the default data set.",
          "excludeCategory":
             "Specifies a category to exclude from the search results. There are no categories used in the default data set.",
+         "publicationDateRange": "Filters search results to be within a publication date range.",
          "publicationDateRange": "Filters search results to be within a publication date range.",
          "useSemanticReranker":
             "Enables the Azure AI Search semantic ranker, a model that re-ranks search results based on semantic similarity to the user's query.",
