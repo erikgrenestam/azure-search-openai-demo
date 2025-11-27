@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        
         {
             "name": "Backend (Python)",
             "type": "debugpy",
@@ -41,7 +42,31 @@
             "purpose": ["debug-test"],
             "console": "integratedTerminal",
             "justMyCode": false
-          }
+          },
+        {
+            "name": "Prepdocs: Debug prepdocs.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/app/backend/prepdocs.py",
+            "cwd": "${workspaceFolder}/app/backend",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "console": "integratedTerminal",
+            "args": ["--verbose"],
+            "envFile": "${workspaceFolder}/.env",
+            "justMyCode": false
+        },
+        {
+            "name": "Prepdocs: Debug prepdocs.py (local data)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/app/backend/prepdocs.py",
+            "cwd": "${workspaceFolder}/app/backend",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "console": "integratedTerminal",
+            "args": ["${workspaceFolder}/data/*", "--verbose"],
+            "envFile": "${workspaceFolder}/.env",
+            "justMyCode": false
+        }
     ],
     "compounds": [
         {

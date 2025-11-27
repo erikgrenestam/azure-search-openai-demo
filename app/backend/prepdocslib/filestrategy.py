@@ -1,6 +1,7 @@
 import logging
 import json  # Added import
 import os
+from datetime import datetime
 from typing import Optional
 
 from azure.core.credentials import AzureKeyCredential
@@ -14,6 +15,40 @@ from .searchmanager import SearchManager, Section
 from .strategy import DocumentAction, SearchInfo, Strategy
 
 logger = logging.getLogger("scripts")
+
+
+def convert_timestamp_to_iso8601(timestamp) -> Optional[str]:
+    """
+    Convert Unix timestamp (milliseconds) to ISO 8601 format for Azure Search.
+    
+    Args:
+        timestamp: Unix timestamp in milliseconds (int) or ISO 8601 string or None
+    
+    Returns:
+        ISO 8601 formatted string or None
+    """
+    if timestamp is None or timestamp == '':
+        return None
+    
+    # If already a string, check if it's in ISO format
+    if isinstance(timestamp, str):
+        # If it contains 'T' or '-', assume it's already in ISO format
+        if 'T' in timestamp or timestamp.count('-') >= 2:
+            return timestamp
+        # Otherwise try to parse as timestamp string
+        try:
+            timestamp = int(timestamp)
+        except ValueError:
+            logger.warning(f"Could not parse publication_date: {timestamp}")
+            return None
+    
+    # Convert Unix timestamp (milliseconds) to ISO 8601
+    try:
+        dt = datetime.fromtimestamp(timestamp / 1000.0)
+        return dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+    except (ValueError, TypeError, OSError) as e:
+        logger.warning(f"Could not convert publication_date timestamp {timestamp}: {e}")
+        return None
 
 
 async def parse_file(
@@ -126,7 +161,7 @@ class FileStrategy(Strategy):
                 metadata_lookup = {
                     row.downloaded_filename: {
                         "content_type": row.content_type,
-                        "publication_date": row.publication_date,
+                        "publication_date": convert_timestamp_to_iso8601(row.publication_date),
                         "topic": row.topic,
                     }
                     for row in metadata_df.iterrows()
@@ -149,11 +184,11 @@ class FileStrategy(Strategy):
             
             async for file in files:
                 try:
-                    if file.filename().lower() == "metadata.json":
+                    if file.filename().lower() == "metadata_records.json":
                         metadata_file = file
                         break
                 finally:
-                    if file.filename().lower() != "metadata.json":
+                    if file.filename().lower() != "metadata_records.json":
                         file.close()
             
             if metadata_file:
@@ -174,7 +209,7 @@ class FileStrategy(Strategy):
                     metadata_lookup = {
                         item.get("downloaded_filename"): {
                             "content_type": item.get("content_type"),
-                            "publication_date": item.get("date"),
+                            "publication_date": convert_timestamp_to_iso8601(item.get("publication_date")),
                             "topic": item.get("topic"),
                         }
                         for item in metadata_content
@@ -217,7 +252,7 @@ class FileStrategy(Strategy):
             async for file in files:
                 try:
                     # Skip metadata.json file during processing
-                    if file.filename().lower() == "metadata.json":
+                    if file.filename().lower() == "metadata_records.json":
                         file.close()
                         continue
                         
