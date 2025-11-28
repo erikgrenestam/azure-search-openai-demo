@@ -4,15 +4,19 @@ import os
 from datetime import datetime
 from typing import Optional
 
-from azure.core.credentials import AzureKeyCredential
-
 from .blobmanager import AdlsBlobManager, BaseBlobManager, BlobManager
 from .embeddings import ImageEmbeddings, OpenAIEmbeddings
+from .figureprocessor import (
+    FigureProcessor,
+    MediaDescriptionStrategy,
+    process_page_image,
+)
 from .fileprocessor import FileProcessor
 from .listfilestrategy import File, ListFileStrategy
 from .mediadescriber import ContentUnderstandingDescriber
 from .searchmanager import SearchManager, Section
 from .strategy import DocumentAction, SearchInfo, Strategy
+from .textprocessor import process_text
 
 logger = logging.getLogger("scripts")
 
@@ -57,10 +61,12 @@ async def parse_file(
     category: Optional[str] = None,
     blob_manager: Optional[BaseBlobManager] = None,
     image_embeddings_client: Optional[ImageEmbeddings] = None,
+    figure_processor: Optional[FigureProcessor] = None,
     user_oid: Optional[str] = None,
     publication_date: Optional[str] = None,
     topic: Optional[list[str]] = None,
 ) -> list[Section]:
+
     key = file.file_extension().lower()
     processor = file_processors.get(key)
     if processor is None:
@@ -70,21 +76,16 @@ async def parse_file(
     pages = [page async for page in processor.parser.parse(content=file.content)]
     for page in pages:
         for image in page.images:
-            if not blob_manager or not image_embeddings_client:
-                raise ValueError("BlobManager and ImageEmbeddingsClient must be provided to parse images in the file.")
-            if image.url is None:
-                image.url = await blob_manager.upload_document_image(
-                    file.filename(), image.bytes, image.filename, image.page_num, user_oid=user_oid
-                )
-            if image_embeddings_client:
-                image.embedding = await image_embeddings_client.create_embedding_for_image(image.bytes)
-    logger.info("Splitting '%s' into sections", file.filename())
-    sections = [Section(chunk, content=file, category=category, publication_date=publication_date, topic=topic) for chunk in processor.splitter.split_pages(pages)]
-    # For now, add the images back to each split chunk based off chunk.page_num
-    for section in sections:
-        section.chunk.images = [
-            image for page in pages if page.page_num == section.chunk.page_num for image in page.images
-        ]
+            logger.info("Processing image '%s' on page %d", image.filename, page.page_num)
+            await process_page_image(
+                image=image,
+                document_filename=file.filename(),
+                blob_manager=blob_manager,
+                image_embeddings_client=image_embeddings_client,
+                figure_processor=figure_processor,
+                user_oid=user_oid,
+            )
+    sections = process_text(pages, file, processor.splitter, category=category, publication_date=publication_date, topic=topic)
     return sections
 
 
@@ -106,9 +107,10 @@ class FileStrategy(Strategy):
         search_field_name_embedding: Optional[str] = None,
         use_acls: bool = False,
         category: Optional[str] = None,
-        use_content_understanding: bool = False,
-        content_understanding_endpoint: Optional[str] = None,
+        figure_processor: Optional[FigureProcessor] = None,
         enforce_access_control: bool = False,
+        use_web_source: bool = False,
+        use_sharepoint_source: bool = False,
     ):
         self.list_file_strategy = list_file_strategy
         self.blob_manager = blob_manager
@@ -121,21 +123,115 @@ class FileStrategy(Strategy):
         self.search_info = search_info
         self.use_acls = use_acls
         self.category = category
-        self.use_content_understanding = use_content_understanding
-        self.content_understanding_endpoint = content_understanding_endpoint
+        self.figure_processor = figure_processor
         self.enforce_access_control = enforce_access_control
+        self.use_web_source = use_web_source
+        self.use_sharepoint_source = use_sharepoint_source
 
     def setup_search_manager(self):
         self.search_manager = SearchManager(
             self.search_info,
             self.search_analyzer_name,
             self.use_acls,
-            False,
+            False,  # use_parent_index_projection disabled for file-based ingestion
             self.embeddings,
             field_name_embedding=self.search_field_name_embedding,
             search_images=self.image_embeddings is not None,
             enforce_access_control=self.enforce_access_control,
+            use_web_source=self.use_web_source,
+            use_sharepoint_source=self.use_sharepoint_source,
         )
+
+    async def load_metadata_lookup(self) -> dict:
+        """
+        Load metadata lookup dictionary, first trying MSSQL database, then falling back to JSON file.
+        
+        Returns:
+            dict: Metadata lookup dictionary with filename as key and metadata as value
+        """
+        metadata_lookup = {}
+        
+        # First try to load from MSSQL database
+        try:
+            logger.info("Attempting to load metadata from MSSQL database")
+            try:
+                from dnsql import DNSQL
+
+                query = """
+                SELECT downloaded_filename, content_type, publication_date, topic 
+                FROM area102.dn_publication_metadata
+                """
+                metadata_df = DNSQL.execute_query(query)
+                
+                metadata_lookup = {
+                    row.downloaded_filename: {
+                        "content_type": row.content_type,
+                        "publication_date": convert_timestamp_to_iso8601(row.publication_date),
+                        "topic": row.topic,
+                    }
+                    for row in metadata_df.iterrows()
+                    if row.downloaded_filename
+                }
+                logger.info(f"Successfully loaded {len(metadata_lookup)} metadata records from MSSQL database")
+                return metadata_lookup
+            except ImportError:
+                logger.warning("dnsql not available, falling back to JSON file for metadata")
+        except Exception as e:
+            logger.warning(f"Failed to load metadata from MSSQL database: {e}, falling back to JSON file")
+        
+        # Fallback: try to load from JSON file in the same directory as the files
+        try:
+            logger.info("Attempting to load metadata from JSON file")
+            
+            # Use the list_file_strategy to find metadata.json file
+            files = self.list_file_strategy.list()
+            metadata_file = None
+            
+            async for file in files:
+                try:
+                    if file.filename().lower() == "metadata_records.json":
+                        metadata_file = file
+                        break
+                finally:
+                    if file.filename().lower() != "metadata_records.json":
+                        file.close()
+            
+            if metadata_file:
+                logger.info(f"Found metadata.json file: {metadata_file.filename()}")
+                # Read the content properly depending on the type
+                if hasattr(metadata_file.content, 'read'):
+                    content_str = metadata_file.content.read()
+                    if isinstance(content_str, bytes):
+                        content_str = content_str.decode('utf-8')
+                else:
+                    content_str = str(metadata_file.content)
+                
+                metadata_content = json.loads(content_str)
+                metadata_file.close()
+                
+                # Create lookup dictionary from JSON content
+                if isinstance(metadata_content, list):
+                    metadata_lookup = {
+                        item.get("downloaded_filename"): {
+                            "content_type": item.get("content_type"),
+                            "publication_date": convert_timestamp_to_iso8601(item.get("publication_date")),
+                            "topic": item.get("topic"),
+                        }
+                        for item in metadata_content
+                        if item.get("downloaded_filename")
+                    }
+                else:
+                    # If it's a direct mapping
+                    metadata_lookup = metadata_content
+                
+                logger.info(f"Successfully loaded {len(metadata_lookup)} metadata records from JSON file")
+            else:
+                logger.warning("No metadata.json file found in the file directory")
+                
+        except Exception as e:
+            logger.error(f"Failed to load metadata from JSON file: {e}")
+        
+        return metadata_lookup
 
     async def load_metadata_lookup(self) -> dict:
         """
@@ -232,15 +328,14 @@ class FileStrategy(Strategy):
         self.setup_search_manager()
         await self.search_manager.create_index()
 
-        if self.use_content_understanding:
-            if self.content_understanding_endpoint is None:
-                raise ValueError("Content Understanding is enabled but no endpoint was provided")
-            if isinstance(self.search_info.credential, AzureKeyCredential):
-                raise ValueError(
-                    "AzureKeyCredential is not supported for Content Understanding, use keyless auth instead"
-                )
-            cu_manager = ContentUnderstandingDescriber(self.content_understanding_endpoint, self.search_info.credential)
-            await cu_manager.create_analyzer()
+        if (
+            self.figure_processor is not None
+            and self.figure_processor.strategy == MediaDescriptionStrategy.CONTENTUNDERSTANDING
+        ):
+            media_describer = await self.figure_processor.get_media_describer()
+            if isinstance(media_describer, ContentUnderstandingDescriber):
+                await media_describer.create_analyzer()
+                self.figure_processor.mark_content_understanding_ready()
 
     async def run(self):
         self.setup_search_manager()
@@ -267,22 +362,19 @@ class FileStrategy(Strategy):
                         publication_date = None
                     topic_str = metadata.get("topic") if metadata else None
                     topics = [t.strip() for t in topic_str.split(",")] if topic_str else []
-                    await self.blob_manager.upload_blob(file)
+                    blob_url = await self.blob_manager.upload_blob(file)
                     sections = await parse_file(
-                        file=file,
-                        file_processors=self.file_processors,
-                        category=file_category,
-                        blob_manager=self.blob_manager,
-                        image_embeddings_client=self.image_embeddings,
-                        user_oid=None,
+                        file,
+                        self.file_processors,
+                        file_category,
+                        self.blob_manager,
+                        self.image_embeddings,
+                        figure_processor=self.figure_processor,
                         publication_date=publication_date,
                         topic=topics
                     )
                     if sections:
-                        await self.search_manager.update_content(sections, url=file.url)
-                        # Write MD5 hash after successful processing
-                        if hasattr(self.list_file_strategy, 'write_md5') and file.url:
-                            self.list_file_strategy.write_md5(file.url)
+                        await self.search_manager.update_content(sections, url=blob_url)
                 finally:
                     if file:
                         file.close()
@@ -310,31 +402,34 @@ class UploadUserFileStrategy:
         embeddings: Optional[OpenAIEmbeddings] = None,
         image_embeddings: Optional[ImageEmbeddings] = None,
         enforce_access_control: bool = False,
+        figure_processor: Optional[FigureProcessor] = None,
     ):
         self.file_processors = file_processors
         self.embeddings = embeddings
         self.image_embeddings = image_embeddings
         self.search_info = search_info
         self.blob_manager = blob_manager
+        self.figure_processor = figure_processor
         self.search_manager = SearchManager(
             search_info=self.search_info,
             search_analyzer_name=None,
             use_acls=True,
-            use_int_vectorization=False,
+            use_parent_index_projection=False,
             embeddings=self.embeddings,
             field_name_embedding=search_field_name_embedding,
-            search_images=False,
+            search_images=image_embeddings is not None,
             enforce_access_control=enforce_access_control,
         )
         self.search_field_name_embedding = search_field_name_embedding
 
     async def add_file(self, file: File, user_oid: str):
         sections = await parse_file(
-            file=file, 
-            file_processors=self.file_processors, 
-            category=None, 
-            blob_manager=self.blob_manager, 
-            image_embeddings_client=self.image_embeddings, 
+            file,
+            self.file_processors,
+            None,
+            self.blob_manager,
+            self.image_embeddings,
+            figure_processor=self.figure_processor,
             user_oid=user_oid,
             publication_date=None,
             topic=None

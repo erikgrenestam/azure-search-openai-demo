@@ -17,7 +17,7 @@ export type ChatAppRequestOverrides = {
     exclude_category?: string;
     seed?: number;
     top?: number;
-    results_merge_strategy?: string;
+    retrieval_reasoning_effort?: string;
     temperature?: number;
     minimum_search_score?: number;
     minimum_reranker_score?: number;
@@ -30,7 +30,9 @@ export type ChatAppRequestOverrides = {
     search_text_embeddings: boolean;
     search_image_embeddings: boolean;
     language: string;
-    use_agentic_retrieval: boolean;
+    use_agentic_knowledgebase: boolean;
+    use_web_source?: boolean;
+    use_sharepoint_source?: boolean;
 };
 
 export type ResponseMessage = {
@@ -44,16 +46,44 @@ export type Thoughts = {
     props?: { [key: string]: any };
 };
 
+export type ActivityDetail = {
+    id?: number;
+    number?: number;
+    type?: string;
+    label?: string;
+    source?: string;
+    query?: string;
+};
+
+export type ExternalResultMetadata = {
+    id?: string;
+    title?: string;
+    url?: string;
+    snippet?: string;
+    activity?: ActivityDetail;
+};
+
+export type CitationActivityDetail = {
+    id?: string;
+    number?: number;
+    type?: string;
+    source?: string;
+    query?: string;
+};
+
 export type DataPoints = {
     text: string[];
     images: string[];
     citations: string[];
+    citation_activity_details?: Record<string, CitationActivityDetail>;
+    external_results_metadata?: ExternalResultMetadata[];
 };
 
 export type ResponseContext = {
     data_points: DataPoints;
     followup_questions: string[] | null;
     thoughts: Thoughts[];
+    answer?: string;
 };
 
 export type ChatAppResponseOrError = {
@@ -83,6 +113,7 @@ export type ChatAppRequest = {
 
 export type Config = {
     defaultReasoningEffort: string;
+    defaultRetrievalReasoningEffort: string;
     showMultimodalOptions: boolean;
     showSemanticRankerOption: boolean;
     showQueryRewritingOption: boolean;
@@ -101,6 +132,8 @@ export type Config = {
     ragSearchImageEmbeddings: boolean;
     ragSendTextSources: boolean;
     ragSendImageSources: boolean;
+    webSourceEnabled: boolean;
+    sharepointSourceEnabled: boolean;
 };
 
 export type SimpleAPIResponse = {
