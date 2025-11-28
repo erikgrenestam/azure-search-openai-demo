@@ -52,6 +52,7 @@ async def check_search_service_connectivity(search_service: str) -> bool:
 def setup_list_file_strategy(
     azure_credential: AsyncTokenCredential,
     local_files: Optional[str],
+    metadata_file: Optional[str],
     datalake_storage_account: Optional[str],
     datalake_filesystem: Optional[str],
     datalake_path: Optional[str],
@@ -74,7 +75,9 @@ def setup_list_file_strategy(
     elif local_files:
         logger.info("Using local files: %s", local_files)
         list_file_strategy = LocalListFileStrategy(
-            path_pattern=local_files, enable_global_documents=enable_global_documents
+            path_pattern=local_files, 
+            metadata_file=metadata_file, 
+            enable_global_documents=enable_global_documents
         )
     else:
         raise ValueError("Either local_files or datalake_storage_account must be provided.")
@@ -133,6 +136,12 @@ if __name__ == "__main__":  # pragma: no cover
         description="Prepare documents by extracting content from PDFs, splitting content into sections, uploading to blob storage, and indexing in a search index."
     )
     parser.add_argument("files", nargs="?", help="Files to be processed")
+    
+    parser.add_argument(
+        "--metadata",
+        default="./metadata/metadata_records.json",
+        help="Location of json metadata file"
+    )
 
     parser.add_argument(
         "--category", help="Value for the category field in the search index for all sections indexed in this run"
@@ -274,6 +283,7 @@ if __name__ == "__main__":  # pragma: no cover
     list_file_strategy = setup_list_file_strategy(
         azure_credential=azd_credential,
         local_files=args.files,
+        metadata_file=args.metadata,
         datalake_storage_account=os.getenv("AZURE_ADLS_GEN2_STORAGE_ACCOUNT"),
         datalake_filesystem=os.getenv("AZURE_ADLS_GEN2_FILESYSTEM"),
         datalake_path=os.getenv("AZURE_ADLS_GEN2_FILESYSTEM_PATH"),

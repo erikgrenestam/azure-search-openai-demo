@@ -183,32 +183,15 @@ class FileStrategy(Strategy):
         try:
             logger.info("Attempting to load metadata from JSON file")
             
-            # Use the list_file_strategy to find metadata.json file
-            files = self.list_file_strategy.list()
-            metadata_file = None
+            # Check if list_file_strategy has metadata_file attribute
+            metadata_file_path = getattr(self.list_file_strategy, 'metadata_file', None)
             
-            async for file in files:
-                try:
-                    if file.filename().lower() == "metadata_records.json":
-                        metadata_file = file
-                        break
-                finally:
-                    if file.filename().lower() != "metadata_records.json":
-                        file.close()
-            
-            if metadata_file:
-                logger.info(f"Found metadata.json file: {metadata_file.filename()}")
-                # Read the content properly depending on the type
-                if hasattr(metadata_file.content, 'read'):
-                    content_str = metadata_file.content.read()
-                    if isinstance(content_str, bytes):
-                        content_str = content_str.decode('utf-8')
-                else:
-                    content_str = str(metadata_file.content)
-                
-                metadata_content = json.loads(content_str)
-                metadata_file.close()
-                
+            # If metadata_file_path is provided and exists, use it directly
+            if metadata_file_path and os.path.exists(metadata_file_path):
+                logger.info(f"Loading metadata from provided path: {metadata_file_path}")
+                with open(metadata_file_path, 'r', encoding='utf-8') as f:
+                    metadata_content = json.load(f)
+
                 # Create lookup dictionary from JSON content
                 if isinstance(metadata_content, list):
                     metadata_lookup = {
@@ -223,101 +206,10 @@ class FileStrategy(Strategy):
                 else:
                     # If it's a direct mapping
                     metadata_lookup = metadata_content
-                
+            
                 logger.info(f"Successfully loaded {len(metadata_lookup)} metadata records from JSON file")
             else:
-                logger.warning("No metadata.json file found in the file directory")
-                
-        except Exception as e:
-            logger.error(f"Failed to load metadata from JSON file: {e}")
-        
-        return metadata_lookup
-
-    async def load_metadata_lookup(self) -> dict:
-        """
-        Load metadata lookup dictionary, first trying MSSQL database, then falling back to JSON file.
-        
-        Returns:
-            dict: Metadata lookup dictionary with filename as key and metadata as value
-        """
-        metadata_lookup = {}
-        
-        # First try to load from MSSQL database
-        try:
-            logger.info("Attempting to load metadata from MSSQL database")
-            try:
-                from dnsql import DNSQL
-
-                query = """
-                SELECT downloaded_filename, content_type, publication_date, topic 
-                FROM area102.dn_publication_metadata
-                """
-                metadata_df = DNSQL.execute_query(query)
-                
-                metadata_lookup = {
-                    row.downloaded_filename: {
-                        "content_type": row.content_type,
-                        "publication_date": convert_timestamp_to_iso8601(row.publication_date),
-                        "topic": row.topic,
-                    }
-                    for row in metadata_df.iterrows()
-                    if row.downloaded_filename
-                }
-                logger.info(f"Successfully loaded {len(metadata_lookup)} metadata records from MSSQL database")
-                return metadata_lookup
-            except ImportError:
-                logger.warning("dnsql not available, falling back to JSON file for metadata")
-        except Exception as e:
-            logger.warning(f"Failed to load metadata from MSSQL database: {e}, falling back to JSON file")
-        
-        # Fallback: try to load from JSON file in the same directory as the files
-        try:
-            logger.info("Attempting to load metadata from JSON file")
-            
-            # Use the list_file_strategy to find metadata.json file
-            files = self.list_file_strategy.list()
-            metadata_file = None
-            
-            async for file in files:
-                try:
-                    if file.filename().lower() == "metadata_records.json":
-                        metadata_file = file
-                        break
-                finally:
-                    if file.filename().lower() != "metadata_records.json":
-                        file.close()
-            
-            if metadata_file:
-                logger.info(f"Found metadata.json file: {metadata_file.filename()}")
-                # Read the content properly depending on the type
-                if hasattr(metadata_file.content, 'read'):
-                    content_str = metadata_file.content.read()
-                    if isinstance(content_str, bytes):
-                        content_str = content_str.decode('utf-8')
-                else:
-                    content_str = str(metadata_file.content)
-                
-                metadata_content = json.loads(content_str)
-                metadata_file.close()
-                
-                # Create lookup dictionary from JSON content
-                if isinstance(metadata_content, list):
-                    metadata_lookup = {
-                        item.get("downloaded_filename"): {
-                            "content_type": item.get("content_type"),
-                            "publication_date": convert_timestamp_to_iso8601(item.get("publication_date")),
-                            "topic": item.get("topic"),
-                        }
-                        for item in metadata_content
-                        if item.get("downloaded_filename")
-                    }
-                else:
-                    # If it's a direct mapping
-                    metadata_lookup = metadata_content
-                
-                logger.info(f"Successfully loaded {len(metadata_lookup)} metadata records from JSON file")
-            else:
-                logger.warning("No metadata.json file found in the file directory")
+                logger.warning("No metadata json file found.")
                 
         except Exception as e:
             logger.error(f"Failed to load metadata from JSON file: {e}")

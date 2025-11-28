@@ -94,8 +94,9 @@ class LocalListFileStrategy(ListFileStrategy):
     Concrete strategy for listing files that are located in a local filesystem
     """
 
-    def __init__(self, path_pattern: str, enable_global_documents: bool = False):
+    def __init__(self, path_pattern: str, metadata_file: Optional[str] = None, enable_global_documents: bool = False):
         self.path_pattern = path_pattern
+        self.metadata_file = metadata_file
         self.enable_global_documents = enable_global_documents
 
     async def list_paths(self) -> AsyncGenerator[str, None]:

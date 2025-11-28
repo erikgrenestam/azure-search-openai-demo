@@ -55,8 +55,6 @@ const Chat = () => {
     const [searchImageEmbeddings, setSearchImageEmbeddings] = useState<boolean>(false);
     const [sendTextSources, setSendTextSources] = useState<boolean>(true);
     const [sendImageSources, setSendImageSources] = useState<boolean>(false);
-    const [shouldStream, setShouldStream] = useState<boolean>(false);
-    const [streamingEnabled, setStreamingEnabled] = useState<boolean>(false);
     const [useOidSecurityFilter, setUseOidSecurityFilter] = useState<boolean>(false);
     const [useGroupsSecurityFilter, setUseGroupsSecurityFilter] = useState<boolean>(false);
 
