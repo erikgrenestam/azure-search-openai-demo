@@ -86,6 +86,7 @@ class SearchManager:
         enforce_access_control: bool = False,
         use_web_source: bool = False,
         use_sharepoint_source: bool = False,
+        embedding_batch_delay_seconds: float = 2,
     ):
         self.search_info = search_info
         self.search_analyzer_name = search_analyzer_name
@@ -98,6 +99,7 @@ class SearchManager:
         self.enforce_access_control = enforce_access_control
         self.use_web_source = use_web_source
         self.use_sharepoint_source = use_sharepoint_source
+        self.embedding_batch_delay_seconds = embedding_batch_delay_seconds
 
     async def create_index(self):
         logger.info("Checking whether search index %s exists...", self.search_info.index_name)
@@ -497,7 +499,7 @@ class SearchManager:
     async def create_knowledgebase(self):
         """Creates one or more Knowledge Bases in the search index based on desired knowledge sources."""
         if self.search_info.knowledgebase_name:
-            field_names = ["id", "sourcepage", "sourcefile", "content", "category"]
+            field_names = ["id", "sourcepage", "sourcefile", "content", "category", "publication_date", "topic"]
             if self.use_acls:
                 field_names.extend(["oids", "groups"])
             if self.search_images:
@@ -651,6 +653,9 @@ class SearchManager:
                     )
                     for i, document in enumerate(documents):
                         document[self.field_name_embedding] = embeddings[i]
+                    # Add delay between embedding batches to avoid rate limiting
+                    if batch_index < len(section_batches) - 1:  # Don't delay after last batch
+                        await asyncio.sleep(self.embedding_batch_delay_seconds)
                 logger.info(
                     "Uploading batch %d with %d sections to search index '%s'",
                     batch_index + 1,

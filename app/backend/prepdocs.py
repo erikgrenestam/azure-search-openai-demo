@@ -153,6 +153,12 @@ if __name__ == "__main__":  # pragma: no cover
         "--disablebatchvectors", action="store_true", help="Don't compute embeddings in batch for the sections"
     )
     parser.add_argument(
+        "--embedding-batch-delay",
+        type=float,
+        default=None,
+        help="Delay in seconds between embedding batches to avoid rate limiting (default: 2 seconds, or value from EMBEDDING_BATCH_DELAY_SECONDS env var)",
+    )
+    parser.add_argument(
         "--remove",
         action="store_true",
         help="Remove references to this document from blob storage and the search index",
@@ -356,6 +362,13 @@ if __name__ == "__main__":  # pragma: no cover
             use_multimodal=use_multimodal,
         )
 
+        # Get embedding batch delay from command line arg, environment variable, or use default
+        embedding_batch_delay = (
+            args.embedding_batch_delay
+            if args.embedding_batch_delay is not None
+            else float(os.getenv("EMBEDDING_BATCH_DELAY_SECONDS", "2"))
+        )
+
         ingestion_strategy = FileStrategy(
             search_info=search_info,
             list_file_strategy=list_file_strategy,
@@ -373,6 +386,7 @@ if __name__ == "__main__":  # pragma: no cover
             enforce_access_control=enforce_access_control,
             use_web_source=use_web_source,
             use_sharepoint_source=use_sharepoint_source,
+            embedding_batch_delay_seconds=embedding_batch_delay,
         )
 
     try:

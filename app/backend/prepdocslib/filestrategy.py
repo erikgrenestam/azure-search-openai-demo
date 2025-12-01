@@ -111,6 +111,7 @@ class FileStrategy(Strategy):
         enforce_access_control: bool = False,
         use_web_source: bool = False,
         use_sharepoint_source: bool = False,
+        embedding_batch_delay_seconds: float = 2,
     ):
         self.list_file_strategy = list_file_strategy
         self.blob_manager = blob_manager
@@ -127,6 +128,7 @@ class FileStrategy(Strategy):
         self.enforce_access_control = enforce_access_control
         self.use_web_source = use_web_source
         self.use_sharepoint_source = use_sharepoint_source
+        self.embedding_batch_delay_seconds = embedding_batch_delay_seconds
 
     def setup_search_manager(self):
         self.search_manager = SearchManager(
@@ -140,6 +142,7 @@ class FileStrategy(Strategy):
             enforce_access_control=self.enforce_access_control,
             use_web_source=self.use_web_source,
             use_sharepoint_source=self.use_sharepoint_source,
+            embedding_batch_delay_seconds=self.embedding_batch_delay_seconds,
         )
 
     async def load_metadata_lookup(self) -> dict:
