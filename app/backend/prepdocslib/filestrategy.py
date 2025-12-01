@@ -245,6 +245,9 @@ class FileStrategy(Strategy):
                     if file.filename().lower() == "metadata_records.json":
                         file.close()
                         continue
+                    
+                    # Store the original local path before upload (for MD5 hash writing)
+                    local_file_path = file.url
                         
                     # Determine category for the current file
                     metadata = metadata_lookup.get(file.filename())
@@ -270,6 +273,9 @@ class FileStrategy(Strategy):
                     )
                     if sections:
                         await self.search_manager.update_content(sections, url=blob_url)
+                        # Write MD5 hash after successful processing
+                        if local_file_path:
+                            self.list_file_strategy.write_md5(local_file_path)
                 finally:
                     if file:
                         file.close()

@@ -19,7 +19,7 @@ from .fileprocessor import FileProcessor
 from .htmlparser import LocalHTMLParser
 from .jsonparser import JsonParser
 from .parser import Parser
-from .pdfparser import DocumentAnalysisParser, LocalPdfParser
+from .pdfparser import DocumentAnalysisParser, LocalPdfParser, DoclingPdfParser
 from .strategy import SearchInfo
 from .textparser import TextParser
 from .textsplitter import SentenceTextSplitter, SimpleTextSplitter
@@ -270,7 +270,7 @@ def build_file_processors(
 
     pdf_parser: Optional[Parser] = None
     if use_local_pdf_parser or document_intelligence_service is None:
-        pdf_parser = LocalPdfParser()
+        pdf_parser = DoclingPdfParser()
     elif doc_int_parser is not None:
         pdf_parser = doc_int_parser
     else:

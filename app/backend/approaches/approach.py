@@ -48,6 +48,22 @@ from approaches.promptmanager import PromptManager
 from prepdocslib.blobmanager import AdlsBlobManager, BlobManager
 from prepdocslib.embeddings import ImageEmbeddings
 
+def extract_date_only(datetime_str: Optional[str]) -> Optional[str]:
+    """Extract only the date portion (YYYY-MM-DD) from an ISO 8601 datetime string.
+    
+    Args:
+        datetime_str: ISO 8601 datetime string (e.g., '2025-06-30T02:00:00Z')
+        
+    Returns:
+        Date string in YYYY-MM-DD format, or None if input is None or invalid
+    """
+    if not datetime_str:
+        return None
+    try:
+        # Split on 'T' to separate date from time, take only date part
+        return datetime_str.split('T')[0]
+    except (AttributeError, IndexError):
+        return datetime_str  # Return as-is if parsing fails
 
 @dataclass
 class ActivityDetail:
@@ -360,7 +376,7 @@ class Approach(ABC):
                         category=document.get("category"),
                         sourcepage=document.get("sourcepage"),
                         sourcefile=document.get("sourcefile"),
-                        publication_date=document.get("publication_date"),
+                        publication_date=extract_date_only(document.get("publication_date")),
                         topic=document.get("topic"),
                         oids=document.get("oids"),
                         groups=document.get("groups"),
@@ -624,7 +640,7 @@ class Approach(ABC):
                         category=ref.source_data.get("category"),
                         sourcepage=ref.source_data.get("sourcepage"),
                         sourcefile=ref.source_data.get("sourcefile"),
-                        publication_date=ref.source_data.get("publication_date"),
+                        publication_date=extract_date_only(ref.source_data.get("publication_date")),
                         topic=ref.source_data.get("topic"),
                         oids=ref.source_data.get("oids"),
                         groups=ref.source_data.get("groups"),
