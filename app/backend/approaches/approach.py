@@ -625,6 +625,7 @@ class Approach(ABC):
                         sourcepage=ref.source_data.get("sourcepage"),
                         sourcefile=ref.source_data.get("sourcefile"),
                         publication_date=ref.source_data.get("publication_date"),
+                        topic=ref.source_data.get("topic"),
                         oids=ref.source_data.get("oids"),
                         groups=ref.source_data.get("groups"),
                         reranker_score=getattr(ref, "reranker_score", None),
@@ -775,8 +776,8 @@ class Approach(ABC):
         citation_activity_details: dict[str, dict[str, Any]] = {}
 
         for doc in results:
-            # Get the citation for the source page
-            citation = self.get_citation(doc.sourcepage)
+            # Get the citation for the source page with publication date
+            citation = self.get_citation(doc.sourcepage, doc.publication_date)
             if citation not in citations:
                 citations.append(citation)
                 # Add activity details if available
@@ -800,7 +801,7 @@ class Approach(ABC):
                     url = await self.download_blob_as_base64(img["url"], user_oid=user_oid)
                     if url:
                         image_sources.append(url)
-                    image_citation = self.get_image_citation(doc.sourcepage or "", img["url"])
+                    image_citation = self.get_image_citation(doc.sourcepage or "", img["url"], doc.publication_date)
                     citations.append(image_citation)
         if web_results:
             for web in web_results:
@@ -848,11 +849,14 @@ class Approach(ABC):
             citation_activity_details=citation_activity_details if citation_activity_details else None,
         )
 
-    def get_citation(self, sourcepage: Optional[str]):
-        return sourcepage or ""
+    def get_citation(self, sourcepage: Optional[str], publication_date: Optional[str] = None):
+        citation = sourcepage or ""
+        if citation and publication_date:
+            citation = f"{citation} (published: {publication_date})"
+        return citation
 
-    def get_image_citation(self, sourcepage: Optional[str], image_url: str):
-        sourcepage_citation = self.get_citation(sourcepage)
+    def get_image_citation(self, sourcepage: Optional[str], image_url: str, publication_date: Optional[str] = None):
+        sourcepage_citation = self.get_citation(sourcepage, publication_date)
         image_filename = image_url.split("/")[-1]
         return f"{sourcepage_citation}({image_filename})"
 
