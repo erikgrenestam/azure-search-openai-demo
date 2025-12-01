@@ -79,8 +79,18 @@ export async function getSpeechApi(text: string): Promise<string | null> {
 }
 
 export function getCitationFilePath(citation: string): string {
-    // If there are parentheses at end of citation, remove part in parentheses
-    const cleanedCitation = citation.replace(/\s*\(.*?\)\s*$/, "").trim();
+    // Extract page fragment (e.g., #page=5) if it exists
+    const pageMatch = citation.match(/(#page=\d+)/);
+    const pageFragment = pageMatch ? pageMatch[1] : "";
+    
+    // Remove the page fragment temporarily and remove any parentheses content
+    let cleanedCitation = citation.replace(/(#page=\d+)/, "").replace(/\s*\(.*?\)\s*$/, "").trim();
+    
+    // Append the page fragment back if it existed
+    if (pageFragment) {
+        cleanedCitation += pageFragment;
+    }
+    
     return `${BACKEND_URI}/content/${cleanedCitation}`;
 }
 
