@@ -9,7 +9,12 @@ export function parseSupportingContentItem(item: string): ParsedSupportingConten
     // Assumes the item starts with the file name followed by : and the content.
     // Example: "sdp_corporate.pdf: this is the content that follows".
     const parts = item.split(": ");
-    const title = parts[0];
+    let title = parts[0];
+    // Remove " (published" and anything after it from the title
+    const parenIndex = title.indexOf(" (");
+    if (parenIndex !== -1) {
+        title = title.substring(0, parenIndex);
+    }
     const content = DOMPurify.sanitize(parts.slice(1).join(": "));
 
     return {
