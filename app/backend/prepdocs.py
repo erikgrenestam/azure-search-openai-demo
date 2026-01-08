@@ -52,6 +52,7 @@ async def check_search_service_connectivity(search_service: str) -> bool:
 def setup_list_file_strategy(
     azure_credential: AsyncTokenCredential,
     local_files: Optional[str],
+    metadata_file: Optional[str],
     datalake_storage_account: Optional[str],
     datalake_filesystem: Optional[str],
     datalake_path: Optional[str],
@@ -74,7 +75,9 @@ def setup_list_file_strategy(
     elif local_files:
         logger.info("Using local files: %s", local_files)
         list_file_strategy = LocalListFileStrategy(
-            path_pattern=local_files, enable_global_documents=enable_global_documents
+            path_pattern=local_files, 
+            metadata_file=metadata_file, 
+            enable_global_documents=enable_global_documents
         )
     else:
         raise ValueError("Either local_files or datalake_storage_account must be provided.")
@@ -133,6 +136,12 @@ if __name__ == "__main__":  # pragma: no cover
         description="Prepare documents by extracting content from PDFs, splitting content into sections, uploading to blob storage, and indexing in a search index."
     )
     parser.add_argument("files", nargs="?", help="Files to be processed")
+    
+    parser.add_argument(
+        "--metadata",
+        default="./metadata/metadata_records.json",
+        help="Location of json metadata file"
+    )
 
     parser.add_argument(
         "--category", help="Value for the category field in the search index for all sections indexed in this run"
@@ -142,6 +151,12 @@ if __name__ == "__main__":  # pragma: no cover
     )
     parser.add_argument(
         "--disablebatchvectors", action="store_true", help="Don't compute embeddings in batch for the sections"
+    )
+    parser.add_argument(
+        "--embedding-batch-delay",
+        type=float,
+        default=None,
+        help="Delay in seconds between embedding batches to avoid rate limiting (default: 2 seconds, or value from EMBEDDING_BATCH_DELAY_SECONDS env var)",
     )
     parser.add_argument(
         "--remove",
@@ -274,6 +289,7 @@ if __name__ == "__main__":  # pragma: no cover
     list_file_strategy = setup_list_file_strategy(
         azure_credential=azd_credential,
         local_files=args.files,
+        metadata_file=args.metadata,
         datalake_storage_account=os.getenv("AZURE_ADLS_GEN2_STORAGE_ACCOUNT"),
         datalake_filesystem=os.getenv("AZURE_ADLS_GEN2_FILESYSTEM"),
         datalake_path=os.getenv("AZURE_ADLS_GEN2_FILESYSTEM_PATH"),
@@ -346,6 +362,13 @@ if __name__ == "__main__":  # pragma: no cover
             use_multimodal=use_multimodal,
         )
 
+        # Get embedding batch delay from command line arg, environment variable, or use default
+        embedding_batch_delay = (
+            args.embedding_batch_delay
+            if args.embedding_batch_delay is not None
+            else float(os.getenv("EMBEDDING_BATCH_DELAY_SECONDS", "2"))
+        )
+
         ingestion_strategy = FileStrategy(
             search_info=search_info,
             list_file_strategy=list_file_strategy,
@@ -363,6 +386,7 @@ if __name__ == "__main__":  # pragma: no cover
             enforce_access_control=enforce_access_control,
             use_web_source=use_web_source,
             use_sharepoint_source=use_sharepoint_source,
+            embedding_batch_delay_seconds=embedding_batch_delay,
         )
 
     try:

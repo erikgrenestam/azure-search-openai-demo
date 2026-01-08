@@ -55,11 +55,17 @@ class Section:
     A section of a page that is stored in a search service. These sections are used as context by Azure OpenAI service
     """
 
-    def __init__(self, chunk: Chunk, content: File, category: Optional[str] = None):
+    def __init__(self, 
+                 chunk: Chunk,
+                 content: File,
+                 category: Optional[str] = None,
+                publication_date: Optional[str] = None,
+                topic: Optional[list[str]] = None):
         self.chunk = chunk  # content comes from here
         self.content = content  # sourcepage and sourcefile come from here
         self.category = category
-        # this also needs images which will become the images field
+        self.publication_date = publication_date
+        self.topic = topic
 
 
 class SearchManager:
@@ -80,6 +86,7 @@ class SearchManager:
         enforce_access_control: bool = False,
         use_web_source: bool = False,
         use_sharepoint_source: bool = False,
+        embedding_batch_delay_seconds: float = 2,
     ):
         self.search_info = search_info
         self.search_analyzer_name = search_analyzer_name
@@ -92,6 +99,7 @@ class SearchManager:
         self.enforce_access_control = enforce_access_control
         self.use_web_source = use_web_source
         self.use_sharepoint_source = use_sharepoint_source
+        self.embedding_batch_delay_seconds = embedding_batch_delay_seconds
 
     async def create_index(self):
         logger.info("Checking whether search index %s exists...", self.search_info.index_name)
@@ -257,6 +265,13 @@ class SearchManager:
                         analyzer_name=self.search_analyzer_name,
                     ),
                     SimpleField(name="category", type="Edm.String", filterable=True, facetable=True),
+                    SimpleField(name="publication_date", type=SearchFieldDataType.DateTimeOffset, filterable=True, facetable=True, sortable=True),
+                    SearchField(
+                        name="topic",
+                        type=SearchFieldDataType.Collection(SearchFieldDataType.String),
+                        filterable=True,
+                        facetable=True,
+                    ),
                     SimpleField(
                         name="sourcepage",
                         type="Edm.String",
@@ -484,7 +499,7 @@ class SearchManager:
     async def create_knowledgebase(self):
         """Creates one or more Knowledge Bases in the search index based on desired knowledge sources."""
         if self.search_info.knowledgebase_name:
-            field_names = ["id", "sourcepage", "sourcefile", "content", "category"]
+            field_names = ["id", "sourcepage", "sourcefile", "content", "category", "publication_date", "topic"]
             if self.use_acls:
                 field_names.extend(["oids", "groups"])
             if self.search_images:
@@ -607,7 +622,7 @@ class SearchManager:
                                 {
                                     "url": image.url,
                                     "description": image.description,
-                                    "boundingbox": image.bbox,
+                                    "boundingbox": list(image.bbox),  # Convert tuple to list for Collection field
                                     "embedding": image.embedding,
                                 }
                                 for image in section.chunk.images
@@ -617,6 +632,8 @@ class SearchManager:
                         "id": f"{section.content.filename_to_id()}-page-{section_index + batch_index * MAX_BATCH_SIZE}",
                         "content": section.chunk.text,
                         "category": section.category,
+                        "publication_date": section.publication_date,
+                        "topic": section.topic,
                         "sourcepage": BlobManager.sourcepage_from_file_page(
                             filename=section.content.filename(), page=section.chunk.page_num
                         ),
@@ -636,6 +653,9 @@ class SearchManager:
                     )
                     for i, document in enumerate(documents):
                         document[self.field_name_embedding] = embeddings[i]
+                    # Add delay between embedding batches to avoid rate limiting
+                    if batch_index < len(section_batches) - 1:  # Don't delay after last batch
+                        await asyncio.sleep(self.embedding_batch_delay_seconds)
                 logger.info(
                     "Uploading batch %d with %d sections to search index '%s'",
                     batch_index + 1,

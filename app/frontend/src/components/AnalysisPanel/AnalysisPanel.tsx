@@ -60,7 +60,7 @@ export const AnalysisPanel = ({ answer, activeTab, activeCitation, citationHeigh
     };
     useEffect(() => {
         fetchCitation();
-    }, []);
+    }, [activeCitation]);
 
     const renderFileViewer = () => {
         if (!activeCitation) {

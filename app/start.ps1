@@ -38,7 +38,7 @@ if (Test-Path -Path "/usr") {
   $venvPythonPath = "$directory/.venv/bin/python"
 }
 
-Start-Process -FilePath $venvPythonPath -ArgumentList "-m pip install -r backend/requirements.txt" -Wait -NoNewWindow
+Start-Process -FilePath $venvPythonPath -ArgumentList "-m pip install -r backend/requirements-dev-local.txt" -Wait -NoNewWindow
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Failed to restore backend python packages"
     exit $LASTEXITCODE
@@ -68,7 +68,7 @@ Write-Host "Starting backend"
 Write-Host ""
 Set-Location ../backend
 
-$port = 50505
+$port = 7000
 $hostname = "localhost"
 Start-Process -FilePath $venvPythonPath -ArgumentList "-m quart --app main:app run --port $port --host $hostname --reload" -Wait -NoNewWindow
 

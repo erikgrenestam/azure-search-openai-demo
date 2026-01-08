@@ -48,6 +48,22 @@ from approaches.promptmanager import PromptManager
 from prepdocslib.blobmanager import AdlsBlobManager, BlobManager
 from prepdocslib.embeddings import ImageEmbeddings
 
+def extract_date_only(datetime_str: Optional[str]) -> Optional[str]:
+    """Extract only the date portion (YYYY-MM-DD) from an ISO 8601 datetime string.
+    
+    Args:
+        datetime_str: ISO 8601 datetime string (e.g., '2025-06-30T02:00:00Z')
+        
+    Returns:
+        Date string in YYYY-MM-DD format, or None if input is None or invalid
+    """
+    if not datetime_str:
+        return None
+    try:
+        # Split on 'T' to separate date from time, take only date part
+        return datetime_str.split('T')[0]
+    except (AttributeError, IndexError):
+        return datetime_str  # Return as-is if parsing fails
 
 @dataclass
 class ActivityDetail:
@@ -64,6 +80,8 @@ class Document:
     ref_id: Optional[str] = None  # Reference id from agentic retrieval (if applicable)
     content: Optional[str] = None
     category: Optional[str] = None
+    publication_date: Optional[str] = None
+    topic: Optional[list[str]] = None
     sourcepage: Optional[str] = None
     sourcefile: Optional[str] = None
     oids: Optional[list[str]] = None
@@ -80,6 +98,8 @@ class Document:
             "id": self.id,
             "content": self.content,
             "category": self.category,
+            "publication_date": self.publication_date,
+            "topic": self.topic,
             "sourcepage": self.sourcepage,
             "sourcefile": self.sourcefile,
             "oids": self.oids,
@@ -285,12 +305,23 @@ class Approach(ABC):
     def build_filter(self, overrides: dict[str, Any]) -> Optional[str]:
         include_category = overrides.get("include_category")
         exclude_category = overrides.get("exclude_category")
+        topic = overrides.get("topic")
+        publication_date_min = overrides.get("publication_date_min")
+        publication_date_max = overrides.get("publication_date_max")
         filters = []
         if include_category:
-            filters.append("category eq '{}'".format(include_category.replace("'", "''")))
+            filters.append("search.in(category, '{}', ',')".format(include_category.replace("'", "''")))
         if exclude_category:
             filters.append("category ne '{}'".format(exclude_category.replace("'", "''")))
-        return None if not filters else " and ".join(filters)
+        if topic:
+            filters.append(
+                "topic/any(t: search.in(t, '{}', ','))".format(topic.replace("'", "''"))
+            )
+        if publication_date_min:
+            filters.append(f"publication_date ge {publication_date_min}")
+        if publication_date_max:
+            filters.append(f"publication_date le {publication_date_max}")
+        return None if len(filters) == 0 else " and ".join(filters)
 
     async def search(
         self,
@@ -322,6 +353,7 @@ class Approach(ABC):
                 query_speller=self.query_speller,
                 semantic_configuration_name="default",
                 semantic_query=query_text,
+                select=["id", "content", "category", "publication_date", "topic", "sourcepage", "sourcefile", "oids", "groups", "images"],
                 x_ms_query_source_authorization=access_token,
             )
         else:
@@ -330,6 +362,7 @@ class Approach(ABC):
                 filter=filter,
                 top=top,
                 vector_queries=search_vectors,
+                select=["id", "content", "category", "publication_date", "topic", "sourcepage", "sourcefile", "oids", "groups", "images"],
                 x_ms_query_source_authorization=access_token,
             )
 
@@ -343,6 +376,8 @@ class Approach(ABC):
                         category=document.get("category"),
                         sourcepage=document.get("sourcepage"),
                         sourcefile=document.get("sourcefile"),
+                        publication_date=extract_date_only(document.get("publication_date")),
+                        topic=document.get("topic"),
                         oids=document.get("oids"),
                         groups=document.get("groups"),
                         captions=cast(list[QueryCaptionResult], document.get("@search.captions")),
@@ -605,6 +640,8 @@ class Approach(ABC):
                         category=ref.source_data.get("category"),
                         sourcepage=ref.source_data.get("sourcepage"),
                         sourcefile=ref.source_data.get("sourcefile"),
+                        publication_date=extract_date_only(ref.source_data.get("publication_date")),
+                        topic=ref.source_data.get("topic"),
                         oids=ref.source_data.get("oids"),
                         groups=ref.source_data.get("groups"),
                         reranker_score=getattr(ref, "reranker_score", None),
@@ -755,8 +792,8 @@ class Approach(ABC):
         citation_activity_details: dict[str, dict[str, Any]] = {}
 
         for doc in results:
-            # Get the citation for the source page
-            citation = self.get_citation(doc.sourcepage)
+            # Get the citation for the source page with publication date
+            citation = self.get_citation(doc.sourcepage, doc.publication_date)
             if citation not in citations:
                 citations.append(citation)
                 # Add activity details if available
@@ -780,7 +817,7 @@ class Approach(ABC):
                     url = await self.download_blob_as_base64(img["url"], user_oid=user_oid)
                     if url:
                         image_sources.append(url)
-                    image_citation = self.get_image_citation(doc.sourcepage or "", img["url"])
+                    image_citation = self.get_image_citation(doc.sourcepage or "", img["url"], doc.publication_date)
                     citations.append(image_citation)
         if web_results:
             for web in web_results:
@@ -828,11 +865,14 @@ class Approach(ABC):
             citation_activity_details=citation_activity_details if citation_activity_details else None,
         )
 
-    def get_citation(self, sourcepage: Optional[str]):
-        return sourcepage or ""
+    def get_citation(self, sourcepage: Optional[str], publication_date: Optional[str] = None):
+        citation = sourcepage or ""
+        if citation and publication_date:
+            citation = f"{citation} (published: {publication_date})"
+        return citation
 
-    def get_image_citation(self, sourcepage: Optional[str], image_url: str):
-        sourcepage_citation = self.get_citation(sourcepage)
+    def get_image_citation(self, sourcepage: Optional[str], image_url: str, publication_date: Optional[str] = None):
+        sourcepage_citation = self.get_citation(sourcepage, publication_date)
         image_filename = image_url.split("/")[-1]
         return f"{sourcepage_citation}({image_filename})"
 

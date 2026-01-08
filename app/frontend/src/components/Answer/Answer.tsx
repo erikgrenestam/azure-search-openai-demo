@@ -43,9 +43,17 @@ export const Answer = ({
     showSpeechOutputBrowser
 }: Props) => {
     const followupQuestions = answer.context?.followup_questions;
-    const parsedAnswer = useMemo(() => parseAnswerToHtml(answer, isStreaming, onCitationClicked), [answer, isStreaming, onCitationClicked]);
+    // Parse with current streaming state
+    const parsedAnswer = useMemo(() => parseAnswerToHtml(answer, isStreaming, onCitationClicked), [answer.message.content, isStreaming, onCitationClicked]);
+    // Force a final parse when streaming completes to ensure all citations are properly formatted
+    const finalParsedAnswer = useMemo(() => {
+        if (!isStreaming) {
+            return parseAnswerToHtml(answer, false, onCitationClicked);
+        }
+        return parsedAnswer;
+    }, [answer, isStreaming, onCitationClicked, parsedAnswer]);
     const { t } = useTranslation();
-    const sanitizedAnswerHtml = DOMPurify.sanitize(parsedAnswer.answerHtml);
+    const sanitizedAnswerHtml = DOMPurify.sanitize(finalParsedAnswer.answerHtml);
     const [copied, setCopied] = useState(false);
 
     const handleCopy = () => {
@@ -107,11 +115,11 @@ export const Answer = ({
                 </div>
             </Stack.Item>
 
-            {!!parsedAnswer.citations.length && (
+            {!!finalParsedAnswer.citations.length && (
                 <Stack.Item>
                     <Stack horizontal wrap tokens={{ childrenGap: 5 }}>
                         <span className={styles.citationLearnMore}>{t("citationWithColon")}</span>
-                        {parsedAnswer.citations.map(citation => {
+                        {finalParsedAnswer.citations.map(citation => {
                             const isWeb = citation.isWeb;
                             const displayIndex = citation.index;
                             const reference = citation.reference;
@@ -150,7 +158,7 @@ export const Answer = ({
 
             {!!followupQuestions?.length && showFollowupQuestions && onFollowupQuestionClicked && (
                 <Stack.Item>
-                    <Stack horizontal wrap className={`${!!parsedAnswer.citations.length ? styles.followupQuestionsList : ""}`} tokens={{ childrenGap: 6 }}>
+                    <Stack horizontal wrap className={`${!!finalParsedAnswer.citations.length ? styles.followupQuestionsList : ""}`} tokens={{ childrenGap: 6 }}>
                         <span className={styles.followupQuestionLearnMore}>{t("followupQuestions")}</span>
                         {followupQuestions.map((x, i) => {
                             return (
